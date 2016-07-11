@@ -1,10 +1,12 @@
 extern crate rustbox;
 mod view;
+mod text;
 
 use std::default::Default;
 
 use rustbox::RustBox;
 use rustbox::Key;
+use text::{Text,Movement};
 use view::View;
 
 fn main() {
@@ -12,19 +14,27 @@ fn main() {
         Result::Ok(v) => v,
         Result::Err(e) => panic!("{}", e),
     };
-    let view = View::new();
+    let mut text = Text::new();
+    let view = View::new(&rustbox);
 
     loop {
-        view.paint(&rustbox);
+        rustbox.clear();
+        view.paint(&text);
         match rustbox.poll_event(false) {
             Ok(rustbox::Event::KeyEvent(key)) => {
                 match key {
-                    Key ::Char('q') => { break; }
+                    Key::Ctrl('q') => { break; }
+                    Key::Up => { text.step(Movement::Up); }
+                    Key::Down => { text.step(Movement::Down); }
+                    Key::Left => { text.step(Movement::Left); }
+                    Key::Right => { text.step(Movement::Right); }
+                    Key::Home => { text.step(Movement::LineStart); }
+                    Key::End => { text.step(Movement::LineEnd); }
                     _ => { }
                 }
             },
             Err(e) => panic!("{}", e),
-            _ => { }
+            _ => {}
         }
     }
 }
