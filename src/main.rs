@@ -30,11 +30,14 @@ fn main() {
                     Key::Right => { text.step(Movement::Right); }
                     Key::Home => { text.step(Movement::LineStart); }
                     Key::End => { text.step(Movement::LineEnd); }
+                    Key::Backspace => { text.delete(); }
+                    Key::Enter => { text.new_line(); }
+                    Key::Char(c) => { text.insert(c); }
                     _ => { }
                 }
             },
             Err(e) => panic!("{}", e),
-            _ => {}
+            _ => { }
         }
     }
 }
