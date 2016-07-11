@@ -1,0 +1,7 @@
+[package]
+name = "gauge"
+version = "0.1.0"
+authors = ["IGI-111 <igi.222@gmail.com>"]
+
+[dependencies]
+rustbox = "*"
