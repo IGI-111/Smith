@@ -1,6 +1,7 @@
 extern crate rustbox;
 use rustbox::{Color, RustBox};
 use text::{Text,Position};
+use std::cmp;
 
 pub struct View<'a> {
     term: &'a RustBox,
@@ -10,8 +11,8 @@ impl<'a> View<'a> {
         View {term: term}
     }
 
-    pub fn paint(&self, text: &Text) {
-        self.paint_text(text);
+    pub fn render(&self, text: & Text) {
+        self.paint_lines(text);
         self.paint_cursor(text);
         self.paint_status(text);
         self.term.present();
@@ -24,51 +25,70 @@ impl<'a> View<'a> {
 
     fn paint_status(&self, text: &Text) {
         let &Position {line, column} = text.get_pos();
-        let (x, y) = self.cursor_pos(text);
-        self.term.print(0, self.term.height()-1, rustbox::RB_REVERSE, Color::Default, Color::Default,
-                        &format!("({}, {}) {}, {}", x, y, line, column));
+        let line_count = text.get_lines().len();
+        let advance = ((line+1) as f64 / line_count as f64 * 100.0).floor();
+
+        let screen_width = self.term.width();
+        let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
+        let y = self.lines_height();
+        self.term.print(0, y, rustbox::RB_REVERSE, Color::Default, Color::Default,
+                        &empty_line);
+
+        let position_info = format!("{}% {}/{}: {}", advance, line+1, line_count, column);
+        let x = screen_width - position_info.len();
+        self.term.print(x, y, rustbox::RB_REVERSE, Color::Default, Color::Default,
+                        &position_info);
     }
 
-    fn paint_text(&self, text: &Text) {
-        let line_offset = self.first_line(text);
+    fn paint_lines(&self, text: &Text) {
+        let line_offset = self.line_offset(text.get_pos());
         let window = text.get_lines().iter()
-            .skip(self.first_line(text))
-            .take(self.term.height())
+            .skip(line_offset)
+            .take(self.lines_height())
             .enumerate();
 
-        // TODO: make line numbers offset correctly
-
-        let mut i = 0;
+        let mut y = 0;
         for (relative_number, line) in window {
             let absolute_number = relative_number + line_offset;
-            self.term.print(0, i, rustbox::RB_NORMAL, Color::White, Color::Default,
-                            &absolute_number.to_string());
-            self.term.print(2, i, rustbox::RB_NORMAL, Color::Default, Color::Default,
+            self.term.print(0, y, rustbox::RB_NORMAL, Color::White, Color::Default,
+                            &(absolute_number+1).to_string());
+
+            let line_start = self.line_number_width(text) + 1;
+            self.term.print(line_start, y, rustbox::RB_NORMAL, Color::Default, Color::Default,
                             &line);
-            i += 1;
+            y += 1;
         }
     }
 
     fn cursor_pos(&self, text: &Text) -> (isize, isize) {
-        //FIXME: column used is wrong
+        //TODO: column offsetting for long lines
         let &Position {line, column} = text.get_pos();
-        let first_line = self.first_line(text);
+        let first_line = self.line_offset(text.get_pos());
         let y = line - first_line;
-        (column as isize, y as isize)
+        ((self.line_number_width(text) + 1 + column) as isize,
+        y as isize)
     }
 
-    fn first_line(&self, text: &Text) -> usize {
-        let line = text.get_pos().line;
-        let screen_height = self.term.height();
+    fn line_number_width(&self, text: &Text) -> usize {
+        let position = text.get_pos();
+        let max_in_window = self.line_offset(position) + self.lines_height();
+        let max_in_text = text.get_lines().len();
+        let max = cmp::min(max_in_window, max_in_text);
+        max.to_string().len()
+    }
 
-        match line.checked_sub(screen_height / 2) {
+    fn line_offset(&self, position: &Position) -> usize {
+        let line = position.line;
+        match line.checked_sub(self.lines_height() / 2) {
             None => 0,
             Some(val) => val,
         }
     }
 
-    fn last_line(&self, text: &Text) -> usize {
-        self.first_line(text) + self.term.height()
+    fn status_height(&self) -> usize { 2 }
+
+    fn lines_height(&self) -> usize {
+        self.term.height() - self.status_height()
     }
 }
 

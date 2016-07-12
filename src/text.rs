@@ -81,7 +81,9 @@ impl Text {
     }
 
     pub fn delete(&mut self){
-        if self.pos.column == 0 && self.pos.line > 0 {
+        if self.pos.line == 0 {
+            return
+        } else if self.pos.column == 0 {
             let previous_line_end = self.lines[self.pos.line-1].len();
             {
                 let line_content = self.lines[self.pos.line].clone();

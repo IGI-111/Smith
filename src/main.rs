@@ -17,27 +17,32 @@ fn main() {
     let mut text = Text::new();
     let view = View::new(&rustbox);
 
+    rustbox.clear();
+    view.render(&text);
+
     loop {
-        rustbox.clear();
-        view.paint(&text);
         match rustbox.poll_event(false) {
-            Ok(rustbox::Event::KeyEvent(key)) => {
-                match key {
-                    Key::Ctrl('q') => { break; }
-                    Key::Up => { text.step(Movement::Up); }
-                    Key::Down => { text.step(Movement::Down); }
-                    Key::Left => { text.step(Movement::Left); }
-                    Key::Right => { text.step(Movement::Right); }
-                    Key::Home => { text.step(Movement::LineStart); }
-                    Key::End => { text.step(Movement::LineEnd); }
-                    Key::Backspace => { text.delete(); }
-                    Key::Enter => { text.new_line(); }
-                    Key::Char(c) => { text.insert(c); }
-                    _ => { }
+            Ok(event) => {
+                match event{
+                    rustbox::Event::KeyEvent(key) => match key {
+                        Key::Ctrl('q') => { break; }
+                        Key::Up => { text.step(Movement::Up); }
+                        Key::Down => { text.step(Movement::Down); }
+                        Key::Left => { text.step(Movement::Left); }
+                        Key::Right => { text.step(Movement::Right); }
+                        Key::Home => { text.step(Movement::LineStart); }
+                        Key::End => { text.step(Movement::LineEnd); }
+                        Key::Backspace => { text.delete(); }
+                        Key::Enter => { text.new_line(); }
+                        Key::Char(c) => { text.insert(c); }
+                        _ => { }
+                    },
+                    _ => {}
                 }
+                rustbox.clear();
+                view.render(&text);
             },
             Err(e) => panic!("{}", e),
-            _ => { }
         }
     }
 }
