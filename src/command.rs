@@ -11,7 +11,7 @@ pub fn treat_event(text: &mut Text, view: &View, event: &Event) -> bool {
                 }
                 Key::Ctrl('s') => {
                     match text.save_file() {
-                        Err(e) => panic!("{}", e),
+                        Err(e) => view.render_message(e.to_string()),
                         Ok(_) => view.render_message(format!("Saved file {}", text.get_name())),
                     }
                 }

@@ -1,6 +1,6 @@
 use std::string::String;
 use std::fs::File;
-use std::io::{Read, Write, Result};
+use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
 
 pub struct Position {
@@ -155,6 +155,9 @@ impl Text {
 
     }
     pub fn save_file(&self) -> Result<()> {
+        if self.name.len() <= 0 {
+            return Err(Error::new(ErrorKind::InvalidInput, "Can't write file with no name"));
+        }
         let mut file = try!(File::create(&self.name));
         for line in self.lines.iter() {
             let mut line_bytes = Vec::from(line.as_bytes());

@@ -23,12 +23,12 @@ fn main() {
 fn edit_file(filename: Option<String>) {
     let rustbox = match RustBox::init(Default::default()) {
         Ok(v) => v,
-        Err(e) => panic!("{}", e),
+        Err(e) => panic!(e.to_string()),
     };
     let mut text = match filename {
         Some(name) => match Text::open_file(name) {
             Ok(v) => v,
-            Err(e) => panic!("{}", e),
+            Err(e) => panic!(e.to_string()),
         },
         None => Text::empty(),
     };
@@ -46,7 +46,7 @@ fn edit_file(filename: Option<String>) {
                 }
                 view.render(&mut text);
             }
-            Err(e) => panic!("{}", e),
+            Err(e) => panic!(e.to_string()),
         }
     }
 }
