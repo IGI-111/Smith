@@ -1,4 +1,8 @@
 use std::string::String;
+use std::fs::File;
+use std::io::Read;
+use std::io::Error;
+use std::path::Path;
 
 pub struct Position {
     pub line: usize,
@@ -7,7 +11,10 @@ pub struct Position {
 
 impl Position {
     pub fn new(line: usize, column: usize) -> Position {
-        Position {line:line, column:column}
+        Position {
+            line: line,
+            column: column,
+        }
     }
 }
 
@@ -15,20 +22,46 @@ impl Position {
 pub struct Text {
     pos: Position,
     lines: Vec<String>,
+    name: String,
 }
 
 impl Text {
-    pub fn new() -> Text {
-        Text { pos: Position::new(0,0), lines:vec![
-            String::from("Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. "),
-            String::from("Lorem"),
-            String::from("Ipsum")] }
+    pub fn empty() -> Text {
+        Text {
+            pos: Position::new(0, 0),
+            lines: vec![String::new()],
+            name: String::new(),
+        }
+    }
+    pub fn open(filename: String) -> Result<Text, Error> {
+        if Path::new(&filename).exists() {
+            let mut file = try!(File::open(&filename));
+
+            let mut buf = String::new();
+            try!(file.read_to_string(&mut buf));
+            let lines: Vec<String> = buf.split_terminator("\n").map(|x| String::from(x)).collect();
+
+            Ok(Text {
+                pos: Position::new(0, 0),
+                lines: lines,
+                name: filename,
+            })
+        } else {
+            Ok(Text {
+                pos: Position::new(0, 0),
+                lines: vec![String::new()],
+                name: filename,
+            })
+        }
     }
     pub fn get_pos(&self) -> &Position {
         &self.pos
     }
     pub fn get_lines(&self) -> &Vec<String> {
         &self.lines
+    }
+    pub fn get_name(&self) -> &String {
+        &self.name
     }
     pub fn step(&mut self, mov: Movement) {
         match mov {
@@ -39,7 +72,7 @@ impl Text {
                 }
             }
             Movement::Down => {
-                if self.pos.line < self.lines.len()-1 {
+                if self.pos.line < self.lines.len() - 1 {
                     self.pos.line += 1;
                     self.check_column();
                 }
@@ -63,7 +96,7 @@ impl Text {
         }
     }
 
-    fn check_column(&mut self){
+    fn check_column(&mut self) {
         let line_length = self.lines[self.pos.line].len();
         if self.pos.column > line_length {
             self.pos.column = line_length;
@@ -80,14 +113,14 @@ impl Text {
         self.pos.column += 1;
     }
 
-    pub fn delete(&mut self){
+    pub fn delete(&mut self) {
         if self.pos.line == 0 {
-            return
+            return;
         } else if self.pos.column == 0 {
-            let previous_line_end = self.lines[self.pos.line-1].len();
+            let previous_line_end = self.lines[self.pos.line - 1].len();
             {
                 let line_content = self.lines[self.pos.line].clone();
-                let previous_line = &mut self.lines[self.pos.line-1];
+                let previous_line = &mut self.lines[self.pos.line - 1];
                 previous_line.push_str(&line_content);
             }
             self.lines.remove(self.pos.line);
@@ -95,26 +128,25 @@ impl Text {
             self.pos.line -= 1;
             self.pos.column = previous_line_end;
         } else {
-            self.lines[self.pos.line].remove(self.pos.column-1);
+            self.lines[self.pos.line].remove(self.pos.column - 1);
             self.pos.column -= 1;
         }
     }
 
-    pub fn new_line(&mut self){
+    pub fn new_line(&mut self) {
         if self.pos.column == self.lines[self.pos.line].len() {
-            self.lines.insert(self.pos.line+1, String::new());
+            self.lines.insert(self.pos.line + 1, String::new());
             self.pos.line += 1;
             self.check_column();
         } else {
             let old_line;
             let new_line;
             {
-                let line_split =
-                    self.lines[self.pos.line].split_at(self.pos.column).clone();
+                let line_split = self.lines[self.pos.line].split_at(self.pos.column).clone();
                 old_line = String::from(line_split.0);
                 new_line = String::from(line_split.1);
             }
-            self.lines.insert(self.pos.line+1, String::from(new_line));
+            self.lines.insert(self.pos.line + 1, String::from(new_line));
             self.lines[self.pos.line] = String::from(old_line);
 
             self.pos.line += 1;
@@ -122,7 +154,6 @@ impl Text {
         }
 
     }
-
 }
 
 pub enum Movement {

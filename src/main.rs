@@ -1,47 +1,51 @@
 extern crate rustbox;
 mod view;
 mod text;
+mod command;
 
 use std::default::Default;
-
+use std::env;
 use rustbox::RustBox;
-use rustbox::Key;
-use text::{Text,Movement};
+use text::Text;
 use view::View;
 
 fn main() {
+    let args = env::args();
+    if args.len() > 1 {
+        for filename in args.skip(1) {
+            edit_file(Some(filename));
+        }
+    } else {
+        edit_file(None);
+    }
+}
+
+fn edit_file(filename: Option<String>) {
     let rustbox = match RustBox::init(Default::default()) {
-        Result::Ok(v) => v,
-        Result::Err(e) => panic!("{}", e),
+        Ok(v) => v,
+        Err(e) => panic!("{}", e),
     };
-    let mut text = Text::new();
+    let mut text = match filename {
+        Some(name) => match Text::open(name) {
+            Ok(v) => v,
+            Err(e) => panic!("{}", e),
+        },
+        None => Text::empty(),
+    };
     let view = View::new(&rustbox);
 
     rustbox.clear();
-    view.render(&text);
+    view.render(&mut text);
 
     loop {
         match rustbox.poll_event(false) {
             Ok(event) => {
-                match event{
-                    rustbox::Event::KeyEvent(key) => match key {
-                        Key::Ctrl('q') => { break; }
-                        Key::Up => { text.step(Movement::Up); }
-                        Key::Down => { text.step(Movement::Down); }
-                        Key::Left => { text.step(Movement::Left); }
-                        Key::Right => { text.step(Movement::Right); }
-                        Key::Home => { text.step(Movement::LineStart); }
-                        Key::End => { text.step(Movement::LineEnd); }
-                        Key::Backspace => { text.delete(); }
-                        Key::Enter => { text.new_line(); }
-                        Key::Char(c) => { text.insert(c); }
-                        _ => { }
-                    },
-                    _ => {}
+                if command::treat_event(&mut text, &event) {
+                    break;
                 }
                 rustbox.clear();
-                view.render(&text);
-            },
+                view.render(&mut text);
+            }
             Err(e) => panic!("{}", e),
         }
     }
