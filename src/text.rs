@@ -1,7 +1,6 @@
 use std::string::String;
 use std::fs::File;
-use std::io::Read;
-use std::io::Error;
+use std::io::{Read, Write, Result};
 use std::path::Path;
 
 pub struct Position {
@@ -33,7 +32,7 @@ impl Text {
             name: String::new(),
         }
     }
-    pub fn open(filename: String) -> Result<Text, Error> {
+    pub fn open_file(filename: String) -> Result<Text> {
         if Path::new(&filename).exists() {
             let mut file = try!(File::open(&filename));
 
@@ -114,9 +113,10 @@ impl Text {
     }
 
     pub fn delete(&mut self) {
-        if self.pos.line == 0 {
-            return;
-        } else if self.pos.column == 0 {
+        if self.pos.column == 0 {
+            if self.pos.line == 0 {
+                return; // can't delete last line
+            }
             let previous_line_end = self.lines[self.pos.line - 1].len();
             {
                 let line_content = self.lines[self.pos.line].clone();
@@ -153,6 +153,16 @@ impl Text {
             self.pos.column = 0;
         }
 
+    }
+    pub fn save_file(&self) -> Result<()> {
+        let mut file = try!(File::create(&self.name));
+        for line in self.lines.iter() {
+            let mut line_bytes = Vec::from(line.as_bytes());
+            line_bytes.extend(b"\n");
+            try!(file.write_all(line_bytes.as_slice()));
+        }
+        try!(file.sync_all());
+        Ok(())
     }
 }
 

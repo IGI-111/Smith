@@ -1,12 +1,19 @@
 use text::{Text, Movement};
 use rustbox::{Event, Key};
+use view::View;
 
-pub fn treat_event(text: &mut Text, event: &Event) -> bool {
+pub fn treat_event(text: &mut Text, view: &View, event: &Event) -> bool {
     match event {
         &Event::KeyEvent(key) => {
             match key {
                 Key::Ctrl('q') => {
                     return true;
+                }
+                Key::Ctrl('s') => {
+                    match text.save_file() {
+                        Err(e) => panic!("{}", e),
+                        Ok(_) => view.render_message(format!("Saved file {}", text.get_name())),
+                    }
                 }
                 Key::Up => {
                     text.step(Movement::Up);

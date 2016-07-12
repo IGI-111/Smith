@@ -11,6 +11,17 @@ impl<'a> View<'a> {
         View { term: term }
     }
 
+    pub fn render_message(&self, message: String) {
+        let y = self.lines_height() + 1;
+        self.term.print(0,
+                        y,
+                        rustbox::RB_NORMAL,
+                        Color::Default,
+                        Color::Default,
+                        &message);
+        self.term.present();
+    }
+
     pub fn render(&self, text: &Text) {
         self.paint_lines(text);
         self.paint_cursor(text);

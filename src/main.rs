@@ -26,7 +26,7 @@ fn edit_file(filename: Option<String>) {
         Err(e) => panic!("{}", e),
     };
     let mut text = match filename {
-        Some(name) => match Text::open(name) {
+        Some(name) => match Text::open_file(name) {
             Ok(v) => v,
             Err(e) => panic!("{}", e),
         },
@@ -40,10 +40,10 @@ fn edit_file(filename: Option<String>) {
     loop {
         match rustbox.poll_event(false) {
             Ok(event) => {
-                if command::treat_event(&mut text, &event) {
+                rustbox.clear();
+                if command::treat_event(&mut text, &view, &event) {
                     break;
                 }
-                rustbox.clear();
                 view.render(&mut text);
             }
             Err(e) => panic!("{}", e),
