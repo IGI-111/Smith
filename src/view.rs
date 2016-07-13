@@ -1,6 +1,6 @@
 extern crate rustbox;
 use rustbox::{Color, RustBox};
-use text::{Text, Position};
+use state::{Text, Position, Editable, Named};
 use std::cmp;
 
 pub struct View<'a> {
@@ -22,23 +22,22 @@ impl<'a> View<'a> {
         self.term.present();
     }
 
-    pub fn render(&self, text: &Text) {
-        self.paint_lines(text);
-        self.paint_cursor(text);
-        self.paint_status(text);
+    pub fn render<T>(&self, content: &T) where T: Editable + Named {
+        self.paint_lines(content);
+        self.paint_cursor(content);
+        self.paint_status(content);
         self.term.present();
     }
 
-    fn paint_cursor(&self, text: &Text) {
-        let (x, y) = self.cursor_pos(text);
+    fn paint_cursor<T: Editable>(&self, content: &T) {
+        let (x, y) = self.cursor_pos(content);
         self.term.set_cursor(x, y);
     }
 
-    fn paint_status(&self, text: &Text) {
-        let &Position { line, column } = text.get_pos();
-        let line_count = text.get_lines().len();
+    fn paint_status<T>(&self, content: &T) where T: Editable + Named {
+        let &Position { line, column } = content.pos();
+        let line_count = content.lines().len();
         let advance = ((line + 1) as f64 / line_count as f64 * 100.0).floor();
-        let filename = text.get_name();
 
         let screen_width = self.term.width();
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
@@ -55,7 +54,7 @@ impl<'a> View<'a> {
                         rustbox::RB_REVERSE,
                         Color::Default,
                         Color::Default,
-                        &filename);
+                        &content.name());
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len();
@@ -67,9 +66,9 @@ impl<'a> View<'a> {
                         &position_info);
     }
 
-    fn paint_lines(&self, text: &Text) {
-        let line_offset = self.line_offset(text.get_pos());
-        let window = text.get_lines()
+    fn paint_lines<T: Editable>(&self, content: &T) {
+        let line_offset = self.line_offset(&content.pos());
+        let window = content.lines()
             .iter()
             .skip(line_offset)
             .take(self.lines_height())
@@ -85,7 +84,7 @@ impl<'a> View<'a> {
                             Color::Default,
                             &(absolute_number + 1).to_string());
 
-            let line_start = self.line_number_width(text) + 1;
+            let line_start = self.line_number_width(content) + 1;
             self.term.print(line_start,
                             y,
                             rustbox::RB_NORMAL,
@@ -96,18 +95,18 @@ impl<'a> View<'a> {
         }
     }
 
-    fn cursor_pos(&self, text: &Text) -> (isize, isize) {
+    fn cursor_pos<T: Editable>(&self, content: &T) -> (isize, isize) {
         // TODO: column offsetting for long lines
-        let &Position { line, column } = text.get_pos();
-        let first_line = self.line_offset(text.get_pos());
+        let &Position { line, column } = content.pos();
+        let first_line = self.line_offset(&content.pos());
         let y = line - first_line;
-        ((self.line_number_width(text) + 1 + column) as isize, y as isize)
+        ((self.line_number_width(content) + 1 + column) as isize, y as isize)
     }
 
-    fn line_number_width(&self, text: &Text) -> usize {
-        let position = text.get_pos();
+    fn line_number_width<T: Editable>(&self, content: &T) -> usize {
+        let ref position = content.pos();
         let max_in_window = self.line_offset(position) + self.lines_height();
-        let max_in_text = text.get_lines().len();
+        let max_in_text = content.lines().len();
         let max = cmp::min(max_in_window, max_in_text);
         max.to_string().len()
     }

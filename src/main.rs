@@ -1,12 +1,12 @@
 extern crate rustbox;
 mod view;
-mod text;
+mod state;
 mod command;
 
 use std::default::Default;
 use std::env;
 use rustbox::RustBox;
-use text::Text;
+use state::{Text, Recorded};
 use view::View;
 
 fn main() {
@@ -25,13 +25,15 @@ fn edit_file(filename: Option<String>) {
         Ok(v) => v,
         Err(e) => panic!(e.to_string()),
     };
-    let mut text = match filename {
-        Some(name) => match Text::open_file(name) {
-            Ok(v) => v,
-            Err(e) => panic!(e.to_string()),
-        },
+    let mut text = Recorded::new(match filename {
+        Some(name) => {
+            match Text::open_file(name) {
+                Ok(v) => v,
+                Err(e) => panic!(e.to_string()),
+            }
+        }
         None => Text::empty(),
-    };
+    });
     let view = View::new(&rustbox);
 
     rustbox.clear();
