@@ -34,7 +34,7 @@ pub enum Movement {
     LineEnd,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Position {
     pub line: usize,
     pub column: usize,

@@ -1,6 +1,6 @@
 use state::{Editable, Position};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Action {
     Insert(String),
     Delete(String),
