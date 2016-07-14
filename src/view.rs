@@ -22,7 +22,9 @@ impl<'a> View<'a> {
         self.term.present();
     }
 
-    pub fn render<T>(&self, content: &T) where T: Editable + Named {
+    pub fn render<T>(&self, content: &T)
+        where T: Editable + Named
+    {
         self.paint_lines(content);
         self.paint_cursor(content);
         self.paint_status(content);
@@ -34,7 +36,9 @@ impl<'a> View<'a> {
         self.term.set_cursor(x, y);
     }
 
-    fn paint_status<T>(&self, content: &T) where T: Editable + Named {
+    fn paint_status<T>(&self, content: &T)
+        where T: Editable + Named
+    {
         let &Position { line, column } = content.pos();
         let line_count = content.lines().len();
         let advance = ((line + 1) as f64 / line_count as f64 * 100.0).floor();

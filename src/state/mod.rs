@@ -20,7 +20,7 @@ pub trait Named {
     fn name(&self) -> &String;
 }
 
-pub trait Saveable : Named {
+pub trait Saveable: Named {
     fn save(&self) -> Result<()>;
 }
 
