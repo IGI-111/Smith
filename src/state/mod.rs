@@ -3,12 +3,13 @@ mod recorded;
 
 pub use self::text::Text;
 pub use self::recorded::Recorded;
+pub use self::recorded::Undoable;
 
-use std::clone::Clone;
 use std::io::Result;
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
+    fn move_to(&mut self, pos: Position);
     fn insert(&mut self, c: char);
     fn delete(&mut self) -> Option<char>;
     fn pos(&self) -> &Position;
@@ -33,6 +34,7 @@ pub enum Movement {
     LineEnd,
 }
 
+#[derive(Clone)]
 pub struct Position {
     pub line: usize,
     pub column: usize,

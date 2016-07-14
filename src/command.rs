@@ -1,9 +1,9 @@
-use state::{Text, Editable, Named, Saveable, Movement};
+use state::{Editable, Undoable, Saveable, Movement};
 use rustbox::{Event, Key};
 use view::View;
 
 pub fn treat_event<T>(content: &mut T, view: &View, event: &Event) -> bool
-where T: Editable + Saveable {
+where T: Editable + Saveable + Undoable {
     match event {
         &Event::KeyEvent(key) => {
             match key {
@@ -14,6 +14,8 @@ where T: Editable + Saveable {
                         Ok(_) => view.render_message(format!("Saved file {}", content.name())),
                     }
                 }
+                Key::Ctrl('z') => { content.undo(); }
+                Key::Ctrl('y') => { content.redo(); }
                 Key::Up => { content.step(Movement::Up); }
                 Key::Down => { content.step(Movement::Down); }
                 Key::Left => { content.step(Movement::Left); }

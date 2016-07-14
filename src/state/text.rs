@@ -122,6 +122,11 @@ impl Editable for Text {
 
     }
 
+    fn move_to(&mut self, pos: Position) {
+        //FIXME add checks
+        self.pos = pos;
+    }
+
     fn pos(&self) -> &Position { &self.pos }
 
     fn lines(&self) -> &Vec<String> { &self.lines }

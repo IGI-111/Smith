@@ -1,6 +1,6 @@
 extern crate rustbox;
 use rustbox::{Color, RustBox};
-use state::{Text, Position, Editable, Named};
+use state::{Position, Editable, Named};
 use std::cmp;
 
 pub struct View<'a> {
