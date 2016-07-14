@@ -69,6 +69,7 @@ impl Action {
     }
 
     pub fn join(&mut self, act: Action) {
+        assert_eq!(act, *self);
         match self {
             &mut Action::Insert(ref mut s) => {
                 let ref act_string = match act {

@@ -14,7 +14,7 @@ pub trait Undoable {
 }
 
 pub struct Recorded<T>
-    where T: Editable
+where T: Editable
 {
     pub content: T,
     pub history: VecDeque<Action>,
@@ -22,7 +22,7 @@ pub struct Recorded<T>
 }
 
 impl<T> Recorded<T>
-    where T: Editable
+where T: Editable
 {
     pub fn new(content: T) -> Recorded<T> {
         Recorded {
@@ -33,15 +33,12 @@ impl<T> Recorded<T>
     }
     fn record(&mut self, act: Action) {
         self.undone.clear(); // we are branching to a new sequence of events
-        match self.history.front_mut() {
-            Some(a) => {
-                if *a == act {
-                    // join similar actions together
-                    a.join(act);
-                    return;
-                }
+        if let Some(a) = self.history.front_mut() {
+            if *a == act {
+                // join similar actions together
+                a.join(act);
+                return;
             }
-            _ => {}
         }
         self.history.push_front(act);
         while self.history.len() > HISTORY_SIZE {
@@ -51,7 +48,7 @@ impl<T> Recorded<T>
 }
 
 impl<T> Undoable for Recorded<T>
-    where T: Editable
+where T: Editable
 {
     fn undo(&mut self) {
         let to_undo = match self.history.pop_front() {
@@ -76,7 +73,7 @@ impl<T> Undoable for Recorded<T>
 }
 
 impl<T> Editable for Recorded<T>
-    where T: Editable
+where T: Editable
 {
     fn step(&mut self, mov: Movement) {
         let from = self.content.pos().clone();
@@ -128,7 +125,7 @@ impl<T> Editable for Recorded<T>
 }
 
 impl<T> Saveable for Recorded<T>
-    where T: Editable + Saveable
+where T: Editable + Saveable
 {
     fn save(&self) -> Result<()> {
         self.content.save()
@@ -136,7 +133,7 @@ impl<T> Saveable for Recorded<T>
 }
 
 impl<T> Named for Recorded<T>
-    where T: Editable + Named
+where T: Editable + Named
 {
     fn name(&self) -> &String {
         self.content.name()

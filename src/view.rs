@@ -128,6 +128,6 @@ impl<'a> View<'a> {
     }
 
     fn lines_height(&self) -> usize {
-        self.term.height() - self.status_height()
+        cmp::max(self.term.height(), self.status_height()) - self.status_height()
     }
 }
