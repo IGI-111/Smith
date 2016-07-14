@@ -1,9 +1,10 @@
 mod text;
-mod recorded;
+mod record;
+// mod select;
 
 pub use self::text::Text;
-pub use self::recorded::Recorded;
-pub use self::recorded::Undoable;
+pub use self::record::Recorded;
+pub use self::record::Undoable;
 
 use std::io::Result;
 

@@ -115,27 +115,21 @@ where T: Editable
         c
     }
 
-    fn pos(&self) -> &Position {
-        self.content.pos()
-    }
-
-    fn lines(&self) -> &Vec<String> {
-        self.content.lines()
+    delegate!{
+        content:
+            pos() -> &Position,
+            lines() -> &Vec<String>,
     }
 }
 
 impl<T> Saveable for Recorded<T>
 where T: Editable + Saveable
 {
-    fn save(&self) -> Result<()> {
-        self.content.save()
-    }
+    delegate!{ content: save() -> Result<()> }
 }
 
 impl<T> Named for Recorded<T>
 where T: Editable + Named
 {
-    fn name(&self) -> &String {
-        self.content.name()
-    }
+    delegate!{ content: name() -> &String }
 }

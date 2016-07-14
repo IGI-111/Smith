@@ -1,4 +1,8 @@
 extern crate rustbox;
+
+#[macro_use]
+mod macros;
+
 mod view;
 mod state;
 mod command;
