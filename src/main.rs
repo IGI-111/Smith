@@ -1,4 +1,5 @@
-extern crate rustbox;
+extern crate termion;
+extern crate clipboard;
 
 #[macro_use]
 mod macros;
@@ -9,9 +10,12 @@ mod command;
 
 use std::default::Default;
 use std::env;
-use rustbox::RustBox;
-use state::{Text, Recorded};
+use std::panic;
+use state::{Text, Recorded, Select};
 use view::View;
+use std::io::stdin;
+use termion::TermRead;
+use command::treat_event;
 
 fn main() {
     let args = env::args();
@@ -25,11 +29,20 @@ fn main() {
 }
 
 fn edit_file(filename: Option<String>) {
-    let rustbox = match RustBox::init(Default::default()) {
-        Ok(v) => v,
-        Err(e) => panic!(e.to_string()),
-    };
-    let mut text = Recorded::new(match filename {
+    let ref mut text = build_text(filename);
+    let ref mut view = View::new();
+
+    view.render(text);
+
+    let stdin = stdin().keys();
+    for key in stdin {
+        if treat_event(text, view, key.unwrap()) { break; }
+        view.render(text);
+    }
+}
+
+fn build_text(filename: Option<String>) -> Recorded<Select<Text>> {
+    Recorded::new(Select::new(match filename {
         Some(name) => {
             match Text::open_file(name) {
                 Ok(v) => v,
@@ -37,22 +50,5 @@ fn edit_file(filename: Option<String>) {
             }
         }
         None => Text::empty(),
-    });
-    let view = View::new(&rustbox);
-
-    rustbox.clear();
-    view.render(&mut text);
-
-    loop {
-        match rustbox.poll_event(false) {
-            Ok(event) => {
-                rustbox.clear();
-                if command::treat_event(&mut text, &view, &event) {
-                    break;
-                }
-                view.render(&mut text);
-            }
-            Err(e) => panic!(e.to_string()),
-        }
-    }
+    }))
 }

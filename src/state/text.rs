@@ -4,6 +4,7 @@ use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
 use super::{Movement, Position, Editable, Named, Saveable};
 
+#[derive(Debug)]
 pub struct Text {
     pub pos: Position,
     pub lines: Vec<String>,
@@ -65,6 +66,7 @@ impl Named for Text {
 
 impl Editable for Text {
     fn step(&mut self, mov: Movement) {
+        println!("{:?}", self);
         match mov {
             Movement::Up => {
                 if self.pos.line > 0 {
@@ -102,7 +104,11 @@ impl Editable for Text {
             new_line(self);
         } else {
             let ref mut line_string = self.lines[self.pos.line];
-            line_string.insert(self.pos.column, c);
+            let index = line_string.char_indices().nth(self.pos.column);
+            match index {
+                None => line_string.push(c),
+                Some((i, _)) => line_string.insert(i, c),
+            };
             self.pos.column += 1;
         }
     }

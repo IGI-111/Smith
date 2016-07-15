@@ -1,10 +1,11 @@
 mod text;
 mod record;
-// mod select;
+mod select;
 
 pub use self::text::Text;
 pub use self::record::Recorded;
 pub use self::record::Undoable;
+pub use self::select::Select;
 
 use std::io::Result;
 
