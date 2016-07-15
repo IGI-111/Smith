@@ -13,8 +13,7 @@ use std::env;
 use std::panic;
 use state::{Text, Recorded, Select};
 use view::View;
-use std::io::stdin;
-use termion::TermRead;
+use termion::{TermRead, async_stdin};
 use command::treat_event;
 
 fn main() {
@@ -34,10 +33,15 @@ fn edit_file(filename: Option<String>) {
 
     view.render(text);
 
-    let stdin = stdin().keys();
-    for key in stdin {
-        if treat_event(text, view, key.unwrap()) { break; }
-        view.render(text);
+    let mut stdin = async_stdin().keys();
+    loop {
+        match stdin.next() {
+            Some(key) => {
+                if treat_event(text, view, key.unwrap()) { break; }
+                view.render(text);
+            },
+            None => {},
+        }
     }
 }
 

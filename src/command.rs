@@ -7,7 +7,6 @@ pub fn treat_event<T>(content: &mut T, view: &mut View, key: Key) -> bool
     where T: Editable + Saveable + Undoable
 {
     match key {
-        // message generating events
         Key::Ctrl('s') => {
             match content.save() {
                 Err(e) => view.message(e.to_string()),
@@ -44,6 +43,12 @@ pub fn treat_event<T>(content: &mut T, view: &mut View, key: Key) -> bool
                 Key::Right => {
                     content.step(Movement::Right);
                 }
+                // Key::Home => {
+                //     content.step(Movement::LineStart);
+                // }
+                // Key::End => {
+                //     content.step(Movement::LineEnd);
+                // }
                 Key::Backspace => {
                     content.delete();
                 }
