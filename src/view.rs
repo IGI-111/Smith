@@ -1,57 +1,75 @@
 use state::{Position, Editable, Named};
 use std::cmp;
-use std::io::{stdout, Stdout, Write};
+use std::io::{stdout, Stdout, Write, Result};
 use termion::{Style, TermWrite, IntoRawMode, RawTerminal, terminal_size};
 
 pub struct View {
     stdout: RawTerminal<Stdout>,
-    message: String,
+    message: Option<String>,
+    prompt: Option<String>,
 }
 
 impl View {
-    pub fn new() -> View {
+    pub fn new() -> Result<View> {
         let mut stdout = stdout().into_raw_mode().unwrap();
-        stdout.clear();
-        stdout.show_cursor();
-        View {
+        try!(stdout.clear());
+        try!(stdout.show_cursor());
+        Ok(View {
             stdout: stdout,
-            message: String::new(),
-        }
+            message: None,
+            prompt: None,
+        })
     }
 
     pub fn message(&mut self, message: String) {
-        self.message = message;
+        self.message = Some(message);
     }
 
-    pub fn reset_message(&mut self) {
-        self.message = String::new();
+    pub fn prompt(&mut self, prompt: String, message: String) {
+        self.message = Some(message);
+        self.prompt = Some(prompt);
     }
 
+    pub fn quiet(&mut self) {
+        self.message = None;
+        self.prompt = None;
+    }
 
-    pub fn render<T>(&mut self, content: &T)
+    pub fn render<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named
     {
-        self.stdout.clear();
-        self.paint_lines(content);
-        self.paint_status(content);
-        self.paint_message();
-        self.paint_cursor(content);
-        self.stdout.flush();
+        try!(self.stdout.clear());
+        try!(self.paint_lines(content));
+        try!(self.paint_status(content));
+        try!(self.paint_message());
+        try!(self.paint_cursor(content));
+        try!(self.stdout.flush());
+        Ok(())
     }
 
-    pub fn paint_message(&mut self) {
-        let y = self.lines_height() + 1;
-        self.stdout.goto(0, y as u16);
-        write!(self.stdout, "{}", self.message);
-        self.stdout.flush();
+    fn paint_message(&mut self) -> Result<()> {
+        match self.message {
+            Some(ref message) => {
+                let y = self.lines_height() + 1;
+                try!(self.stdout.goto(0, y as u16));
+                try!(write!(self.stdout, "{}", message));
+                try!(self.stdout.flush());
+            }
+            None => {}
+        }
+        Ok(())
     }
 
-    fn paint_cursor<T: Editable>(&mut self, content: &T) {
+    fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
+        where T: Editable
+    {
+        //TODO: if there is a prompt, draw the cursor at the right position
         let (x, y) = self.cursor_pos(content);
-        self.stdout.goto(x as u16, y as u16);
+        try!(self.stdout.goto(x as u16, y as u16));
+        Ok(())
     }
 
-    fn paint_status<T>(&mut self, content: &T)
+    fn paint_status<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named
     {
         let &Position { line, column } = content.pos();
@@ -62,23 +80,24 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        self.stdout.style(Style::Invert);
+        try!(self.stdout.style(Style::Invert));
 
-        self.stdout.goto(0, y);
-        write!(self.stdout, "{}", empty_line);
+        try!(self.stdout.goto(0, y));
+        try!(write!(self.stdout, "{}", empty_line));
 
-        self.stdout.goto(0, y);
-        write!(self.stdout, "{}", content.name());
+        try!(self.stdout.goto(0, y));
+        try!(write!(self.stdout, "{}", content.name()));
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        self.stdout.goto(x, y);
-        write!(self.stdout, "{}", position_info);
+        try!(self.stdout.goto(x, y));
+        try!(write!(self.stdout, "{}", position_info));
 
-        self.stdout.style(Style::Reset);
+        try!(self.stdout.style(Style::Reset));
+        Ok(())
     }
 
-    fn paint_lines<T: Editable>(&mut self, content: &T) {
+    fn paint_lines<T: Editable>(&mut self, content: &T) -> Result<()> {
         let line_offset = self.line_offset(&content.pos());
         let window = content.lines()
             .iter()
@@ -90,14 +109,15 @@ impl View {
         for (relative_number, line) in window {
             let absolute_number = relative_number + line_offset as usize;
 
-            self.stdout.goto(0, y);
-            write!(self.stdout, "{}", (absolute_number + 1).to_string());
+            try!(self.stdout.goto(0, y));
+            try!(write!(self.stdout, "{}", (absolute_number + 1).to_string()));
 
             let line_start = self.line_number_width(content) as u16 + 1;
-            self.stdout.goto(line_start, y);
-            write!(self.stdout, "{}", line);
+            try!(self.stdout.goto(line_start, y));
+            try!(write!(self.stdout, "{}", line));
             y += 1;
         }
+        Ok(())
     }
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
