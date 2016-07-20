@@ -1,21 +1,23 @@
 use std::string::String;
+use ropey::Rope;
 use std::fs::File;
+use std::cmp;
 use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
-use super::{Movement, Position, Editable, Named, Saveable};
+use super::{Movement, Editable, Named, Saveable};
 
 #[derive(Debug)]
 pub struct Text {
-    pub pos: Position,
-    pub lines: Vec<String>,
+    pub pos: usize,
+    pub text: Rope,
     pub name: String,
 }
 
 impl Text {
     pub fn empty() -> Text {
         Text {
-            pos: Position::new(0, 0),
-            lines: vec![String::new()],
+            pos: 0,
+            text: Rope::new(),
             name: String::new(),
         }
     }
@@ -25,17 +27,17 @@ impl Text {
 
             let mut buf = String::new();
             try!(file.read_to_string(&mut buf));
-            let lines: Vec<String> = buf.split_terminator("\n").map(|x| String::from(x)).collect();
+            let text = Rope::from_string(buf);
 
             Ok(Text {
-                pos: Position::new(0, 0),
-                lines: lines,
+                pos: 0,
+                text: text,
                 name: filename,
             })
         } else {
             Ok(Text {
-                pos: Position::new(0, 0),
-                lines: vec![String::new()],
+                pos: 0,
+                text: Rope::new(),
                 name: filename,
             })
         }
@@ -48,10 +50,8 @@ impl Saveable for Text {
             return Err(Error::new(ErrorKind::InvalidInput, "Can't write file with no name"));
         }
         let mut file = try!(File::create(&self.name));
-        for line in self.lines.iter() {
-            let mut line_bytes = Vec::from(line.as_bytes());
-            line_bytes.extend(b"\n");
-            try!(file.write_all(line_bytes.as_slice()));
+        for c in self.text.char_iter() {
+            try!(write!(file, "{}", c));
         }
         try!(file.sync_all());
         Ok(())
@@ -66,119 +66,89 @@ impl Named for Text {
 
 impl Editable for Text {
     fn step(&mut self, mov: Movement) {
-        println!("{:?}", self);
         match mov {
             Movement::Up => {
-                if self.pos.line > 0 {
-                    self.pos.line -= 1;
-                    check_column(self);
+                if self.line() > 0 {
+                    let prev_line = self.text.line_index_to_char_index(self.line()-1);
+                    let prev_line_size = self.text.line_iter().nth(self.line()-1).unwrap().char_count();
+                    self.pos = prev_line + cmp::min(self.col(), prev_line_size-1);
                 }
             }
             Movement::Down => {
-                if self.pos.line < self.lines.len() - 1 {
-                    self.pos.line += 1;
-                    check_column(self);
+                if self.line() < self.line_count() {
+                    let next_line = self.text.line_index_to_char_index(self.line()+1);
+                    let next_line_size = self.text.line_iter().nth(self.line()+1).unwrap().char_count();
+                    self.pos = next_line + cmp::min(self.col(), next_line_size-1);
                 }
             }
+            Movement::PageUp(up) => {
+                let up_line = self.text.line_iter().nth(self.line()-1).unwrap().char_count();
+
+            },
+            Movement::PageDown(down) => {
+
+            },
             Movement::Left => {
-                if self.pos.column > 0 {
-                    self.pos.column -= 1;
+                if self.pos > 0 {
+                    self.pos -= 1;
                 }
             }
             Movement::Right => {
-                if self.pos.column < self.lines[self.pos.line].len() {
-                    self.pos.column += 1;
+                if self.pos < self.text.char_count() {
+                    self.pos += 1;
                 }
             }
             Movement::LineStart => {
-                self.pos.column = 0;
+                let curr_line = self.text.line_index_to_char_index(self.line());
+
+                self.pos = curr_line;
             }
             Movement::LineEnd => {
-                self.pos.column = self.lines[self.pos.line].len();
+                let curr_line = self.text.line_index_to_char_index(self.line());
+                let curr_line_size = self.text.line_iter().nth(self.line()).unwrap().char_count();
+                self.pos = curr_line + curr_line_size-1;
             }
         }
     }
 
     fn insert(&mut self, c: char) {
-        if c == '\n' {
-            new_line(self);
-        } else {
-            let ref mut line_string = self.lines[self.pos.line];
-            let index = line_string.char_indices().nth(self.pos.column);
-            match index {
-                None => line_string.push(c),
-                Some((i, _)) => line_string.insert(i, c),
-            };
-            self.pos.column += 1;
-        }
+        self.text.insert_text_at_char_index(&format!("{}", c), self.pos);
+        self.pos += 1;
     }
 
     fn delete(&mut self) -> Option<char> {
-        if self.pos.column != 0 {
-            let c = self.lines[self.pos.line].remove(self.pos.column - 1);
-            self.pos.column -= 1;
-            Some(c)
-        } else if self.pos.line != 0 {
-            join_line(self);
-            Some('\n')
-        } else {
+        if self.pos == 0 {
             None
+        } else {
+            self.pos -= 1;
+            let ch = self.text.char_at_index(self.pos);
+            self.text.remove_text_between_char_indices(self.pos, self.pos+1);
+            Some(ch)
         }
-
     }
 
-    fn move_to(&mut self, pos: Position) {
-        // FIXME add checks
+    fn move_to(&mut self, pos: usize) {
+        assert!(pos < self.text.char_count());
         self.pos = pos;
     }
 
-    fn pos(&self) -> &Position {
-        &self.pos
+    fn pos(&self) -> usize {
+        self.pos
     }
 
-    fn lines(&self) -> &Vec<String> {
-        &self.lines
-    }
-}
-
-fn join_line(text: &mut Text) {
-    let previous_line_end = text.lines[text.pos.line - 1].len();
-    {
-        let line_content = text.lines[text.pos.line].clone();
-        let ref mut previous_line = text.lines[text.pos.line - 1];
-        previous_line.push_str(&line_content);
-    }
-    text.lines.remove(text.pos.line);
-
-    text.pos.line -= 1;
-    text.pos.column = previous_line_end;
-}
-
-fn new_line(text: &mut Text) {
-    if text.pos.column == text.lines[text.pos.line].len() {
-        text.lines.insert(text.pos.line + 1, String::new());
-        text.pos.line += 1;
-        check_column(text);
-    } else {
-        let old_line;
-        let new_line;
-        {
-            let line_split = text.lines[text.pos.line].split_at(text.pos.column).clone();
-            old_line = String::from(line_split.0);
-            new_line = String::from(line_split.1);
-        }
-        text.lines.insert(text.pos.line + 1, String::from(new_line));
-        text.lines[text.pos.line] = String::from(old_line);
-
-        text.pos.line += 1;
-        text.pos.column = 0;
+    fn line(&self) -> usize {
+        self.text.char_index_to_line_index(self.pos)
     }
 
-}
+    fn col(&self) -> usize {
+        self.pos - self.text.line_index_to_char_index(self.line())
+    }
 
-fn check_column(text: &mut Text) {
-    let line_length = text.lines[text.pos.line].len();
-    if text.pos.column > line_length {
-        text.pos.column = line_length;
+    fn line_count(&self) -> usize {
+        self.text.line_ending_count()
+    }
+
+    fn as_rope(&self) -> &Rope {
+        &self.text
     }
 }

@@ -8,14 +8,19 @@ pub use self::record::Undoable;
 pub use self::select::Select;
 
 use std::io::Result;
+use ropey::Rope;
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
-    fn move_to(&mut self, pos: Position);
+    fn move_to(&mut self, pos: usize);
     fn insert(&mut self, c: char);
     fn delete(&mut self) -> Option<char>;
-    fn pos(&self) -> &Position;
-    fn lines(&self) -> &Vec<String>;
+    fn pos(&self) -> usize;
+    fn line(&self) -> usize;
+    fn col(&self) -> usize;
+    fn line_count(&self) -> usize;
+    fn as_rope(&self) -> &Rope;
+
 }
 
 pub trait Named {
@@ -34,19 +39,4 @@ pub enum Movement {
     Right,
     LineStart,
     LineEnd,
-}
-
-#[derive(Clone, Debug)]
-pub struct Position {
-    pub line: usize,
-    pub column: usize,
-}
-
-impl Position {
-    pub fn new(line: usize, column: usize) -> Position {
-        Position {
-            line: line,
-            column: column,
-        }
-    }
 }

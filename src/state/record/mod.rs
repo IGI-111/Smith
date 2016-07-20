@@ -2,8 +2,9 @@ mod action;
 
 use std::collections::VecDeque;
 use std::io::Result;
-use super::{Position, Movement, Editable, Saveable, Named};
+use super::{Movement, Editable, Saveable, Named};
 use self::action::Action;
+use ropey::Rope;
 
 const HISTORY_SIZE: usize = 100;
 const UNDO_SIZE: usize = 100;
@@ -85,10 +86,10 @@ where T: Editable
         });
     }
 
-    fn move_to(&mut self, pos: Position) {
-        let from = self.content.pos().clone();
+    fn move_to(&mut self, pos: usize) {
+        let from = self.content.pos();
         self.content.move_to(pos);
-        let to = self.content.pos().clone();
+        let to = self.content.pos();
         self.record(Action::Move {
             from: from,
             to: to,
@@ -117,8 +118,11 @@ where T: Editable
 
     delegate!{
         content:
-            pos() -> &Position,
-            lines() -> &Vec<String>,
+            pos() -> usize,
+            line() -> usize,
+            col() -> usize,
+            line_count() -> usize,
+            as_rope() -> &Rope,
     }
 }
 

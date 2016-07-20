@@ -1,16 +1,15 @@
-use state::{Editable, Position};
+use state::Editable;
 
 #[derive(Clone, Debug)]
 pub enum Action {
     Insert(String),
     Delete(String),
     Move {
-        from: Position,
-        to: Position,
+        from: usize,
+        to: usize,
     },
 }
 
-impl Eq for Action {}
 impl PartialEq for Action {
     fn eq(&self, other: &Action) -> bool {
         match self {

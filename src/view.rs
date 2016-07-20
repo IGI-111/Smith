@@ -1,4 +1,4 @@
-use state::{Position, Editable, Named};
+use state::{Editable, Named};
 use std::cmp;
 use std::io::{stdout, Stdout, Write, Result};
 use termion::{Style, TermWrite, IntoRawMode, RawTerminal, terminal_size};
@@ -72,8 +72,9 @@ impl View {
     fn paint_status<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named
     {
-        let &Position { line, column } = content.pos();
-        let line_count = content.lines().len();
+        let line = content.line();
+        let column = content.col();
+        let line_count = content.line_count();
         let advance = ((line + 1) as f64 / line_count as f64 * 100.0).floor();
 
         let (screen_width, _) = terminal_size().unwrap();
@@ -98,9 +99,10 @@ impl View {
     }
 
     fn paint_lines<T: Editable>(&mut self, content: &T) -> Result<()> {
-        let line_offset = self.line_offset(&content.pos());
-        let window = content.lines()
-            .iter()
+        let line_offset = self.line_offset(content.line());
+        let line_count = content.line_count();
+        let window = content.as_rope()
+            .line_iter()
             .skip(line_offset as usize)
             .take(self.lines_height() as usize)
             .enumerate();
@@ -112,9 +114,11 @@ impl View {
             try!(self.stdout.goto(0, y));
             try!(write!(self.stdout, "{}", (absolute_number + 1).to_string()));
 
-            let line_start = self.line_number_width(content) as u16 + 1;
+            let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
             try!(self.stdout.goto(line_start, y));
-            try!(write!(self.stdout, "{}", line));
+            for c in line.char_iter() {
+                try!(write!(self.stdout, "{}", c));
+            }
             y += 1;
         }
         Ok(())
@@ -122,22 +126,21 @@ impl View {
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
         // TODO: column offsetting for long lines
-        let &Position { line, column } = content.pos();
-        let first_line = self.line_offset(&content.pos());
+        let line = content.line();
+        let column = content.col();
+        let first_line = self.line_offset(line);
         let y = line - first_line as usize;
-        ((self.line_number_width(content) as usize + 1 + column), y)
+        ((self.line_number_width(line, content.line_count()) as usize + 1 + column), y)
     }
 
-    fn line_number_width<T: Editable>(&self, content: &T) -> u16 {
-        let ref position = content.pos();
-        let max_in_window = self.line_offset(position) + self.lines_height();
-        let max_in_text = content.lines().len();
-        let max = cmp::min(max_in_window, max_in_text as u16);
+    fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
+        let max_in_window = self.line_offset(line)
+            + self.lines_height();
+        let max = cmp::min(max_in_window, line_count as u16);
         max.to_string().len() as u16
     }
 
-    fn line_offset(&self, position: &Position) -> u16 {
-        let line = position.line;
+    fn line_offset(&self, line: usize) -> u16 {
         match line.checked_sub(self.lines_height() as usize / 2) {
             None => 0,
             Some(val) => val as u16,

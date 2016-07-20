@@ -5,6 +5,7 @@ authors = ["IGI-111 <igi.222@gmail.com>"]
 
 [dependencies]
 clipboard = "*"
+ropey = "*"
 
 [dependencies.termion]
 git = "https://github.com/ticki/termion.git"

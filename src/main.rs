@@ -1,5 +1,6 @@
 extern crate termion;
 extern crate clipboard;
+extern crate ropey;
 
 #[macro_use]
 mod macros;
@@ -11,7 +12,8 @@ mod command;
 use std::env;
 use state::{Text, Recorded, Select};
 use view::View;
-use termion::{TermRead, async_stdin};
+use std::io::stdin;
+use termion::TermRead;
 use command::Command;
 
 fn main() {
@@ -32,7 +34,7 @@ fn edit_file(filename: Option<String>) {
 
     view.render(text).unwrap();
 
-    let mut stdin = async_stdin().keys();
+    let mut stdin = stdin().keys();
     loop {
         match stdin.next() {
             Some(key) => {
