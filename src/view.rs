@@ -151,7 +151,7 @@ impl View {
         2
     }
 
-    fn lines_height(&self) -> u16 {
+    pub fn lines_height(&self) -> u16 {
         let (_, screen_height) = terminal_size().unwrap();
         cmp::max(screen_height, self.status_height()) - self.status_height()
     }

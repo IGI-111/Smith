@@ -51,6 +51,8 @@ impl Command {
                     Key::Down => content.step(Movement::Down),
                     Key::Left => content.step(Movement::Left),
                     Key::Right => content.step(Movement::Right),
+                    Key::PageUp => content.step(Movement::PageUp(view.lines_height() as usize)),
+                    Key::PageDown => content.step(Movement::PageDown(view.lines_height() as usize)),
                     Key::Home => content.step(Movement::LineStart),
                     Key::End => content.step(Movement::LineEnd),
                     Key::Backspace => { content.delete(); },

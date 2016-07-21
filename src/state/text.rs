@@ -69,25 +69,36 @@ impl Editable for Text {
         match mov {
             Movement::Up => {
                 if self.line() > 0 {
-                    let prev_line = self.text.line_index_to_char_index(self.line()-1);
-                    let prev_line_size = self.text.line_iter().nth(self.line()-1).unwrap().char_count();
-                    self.pos = prev_line + cmp::min(self.col(), prev_line_size-1);
+                    let prev_line = self.text.line_index_to_char_index(self.line() - 1);
+                    let prev_line_size =
+                        self.text.line_iter().nth(self.line() - 1).unwrap().char_count();
+                    self.pos = prev_line + cmp::min(self.col(), prev_line_size - 1);
                 }
             }
             Movement::Down => {
                 if self.line() < self.line_count() {
-                    let next_line = self.text.line_index_to_char_index(self.line()+1);
-                    let next_line_size = self.text.line_iter().nth(self.line()+1).unwrap().char_count();
-                    self.pos = next_line + cmp::min(self.col(), next_line_size-1);
+                    let next_line = self.text.line_index_to_char_index(self.line() + 1);
+                    let next_line_size =
+                        self.text.line_iter().nth(self.line() + 1).unwrap().char_count();
+                    self.pos = next_line + cmp::min(self.col(), next_line_size - 1);
                 }
             }
             Movement::PageUp(up) => {
-                let up_line = self.text.line_iter().nth(self.line()-1).unwrap().char_count();
-
-            },
+                let target_line = if self.line() < up {
+                    0
+                } else {
+                    self.line() - up
+                };
+                self.pos = self.text.line_index_to_char_index(target_line);
+            }
             Movement::PageDown(down) => {
-
-            },
+                let target_line = if self.line_count() - self.line() < down {
+                    self.line_count()
+                } else {
+                    self.line() + down
+                };
+                self.pos = self.text.line_index_to_char_index(target_line);
+            }
             Movement::Left => {
                 if self.pos > 0 {
                     self.pos -= 1;
@@ -106,7 +117,7 @@ impl Editable for Text {
             Movement::LineEnd => {
                 let curr_line = self.text.line_index_to_char_index(self.line());
                 let curr_line_size = self.text.line_iter().nth(self.line()).unwrap().char_count();
-                self.pos = curr_line + curr_line_size-1;
+                self.pos = curr_line + curr_line_size - 1;
             }
         }
     }
@@ -122,7 +133,7 @@ impl Editable for Text {
         } else {
             self.pos -= 1;
             let ch = self.text.char_at_index(self.pos);
-            self.text.remove_text_between_char_indices(self.pos, self.pos+1);
+            self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
             Some(ch)
         }
     }

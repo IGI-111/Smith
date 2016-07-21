@@ -39,4 +39,6 @@ pub enum Movement {
     Right,
     LineStart,
     LineEnd,
+    PageUp(usize),
+    PageDown(usize),
 }
