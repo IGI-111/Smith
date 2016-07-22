@@ -103,6 +103,7 @@ impl View {
         let line_count = content.line_count();
         let window = content.as_rope()
             .line_iter()
+            .take(line_count)
             .skip(line_offset as usize)
             .take(self.lines_height() as usize)
             .enumerate();
@@ -135,7 +136,7 @@ impl View {
 
     fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
         let max_in_window = self.line_offset(line)
-            + self.lines_height();
+            + self.lines_height() + 2;
         let max = cmp::min(max_in_window, line_count as u16);
         max.to_string().len() as u16
     }

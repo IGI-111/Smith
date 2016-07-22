@@ -5,9 +5,10 @@ use std::io::Result;
 use super::{Movement, Editable, Saveable, Named};
 use self::action::Action;
 use ropey::Rope;
+use std::usize;
 
-const HISTORY_SIZE: usize = 100;
-const UNDO_SIZE: usize = 100;
+const HISTORY_SIZE: usize = usize::MAX;
+const UNDO_SIZE: usize = usize::MAX;
 
 pub trait Undoable {
     fn undo(&mut self);
@@ -80,20 +81,14 @@ where T: Editable
         let from = self.content.pos().clone();
         self.content.step(mov);
         let to = self.content.pos().clone();
-        self.record(Action::Move {
-            from: from,
-            to: to,
-        });
+        self.record(Action::Move(to as isize - from as isize));
     }
 
     fn move_to(&mut self, pos: usize) {
         let from = self.content.pos();
         self.content.move_to(pos);
         let to = self.content.pos();
-        self.record(Action::Move {
-            from: from,
-            to: to,
-        });
+        self.record(Action::Move(to as isize - from as isize));
     }
 
     fn insert(&mut self, c: char) {

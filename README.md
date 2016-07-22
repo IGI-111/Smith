@@ -1,8 +1,11 @@
-# Gauge
+![Smith](Smith.svg)
 
-Gauge is a simple terminal-based text editor written in Rust.
+Smith is a simple terminal-based text editor written in Rust.
 
 Featuring:
+
 * line numbers
 * undo/redo
 * standard keybindings (Ctrl-S, Ctrl-Z...)
+
+

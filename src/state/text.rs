@@ -76,7 +76,7 @@ impl Editable for Text {
                 }
             }
             Movement::Down => {
-                if self.line() < self.line_count() {
+                if self.line() < self.line_count()-1 {
                     let next_line = self.text.line_index_to_char_index(self.line() + 1);
                     let next_line_size =
                         self.text.line_iter().nth(self.line() + 1).unwrap().char_count();
@@ -93,7 +93,7 @@ impl Editable for Text {
             }
             Movement::PageDown(down) => {
                 let target_line = if self.line_count() - self.line() < down {
-                    self.line_count()
+                    self.line_count()-1
                 } else {
                     self.line() + down
                 };
@@ -105,7 +105,7 @@ impl Editable for Text {
                 }
             }
             Movement::Right => {
-                if self.pos < self.text.char_count() {
+                if self.pos < self.text.char_count()-1 {
                     self.pos += 1;
                 }
             }

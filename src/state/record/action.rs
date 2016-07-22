@@ -4,10 +4,7 @@ use state::Editable;
 pub enum Action {
     Insert(String),
     Delete(String),
-    Move {
-        from: usize,
-        to: usize,
-    },
+    Move(isize),
 }
 
 impl PartialEq for Action {
@@ -25,9 +22,9 @@ impl PartialEq for Action {
                     _ => false,
                 }
             }
-            &Action::Move { from: _, to: _ } => {
+            &Action::Move(_) => {
                 match other {
-                    &Action::Move { from: _, to: _ } => true,
+                    &Action::Move(_) => true,
                     _ => false,
                 }
             }
@@ -48,8 +45,9 @@ impl Action {
                     content.delete();
                 }
             }
-            &Action::Move { from: _, ref to } => {
-                content.move_to(to.clone());
+            &Action::Move(rel) => {
+                let new_position = rel + content.pos().clone() as isize;
+                content.move_to(new_position as usize);
             }
         };
     }
@@ -58,12 +56,7 @@ impl Action {
         match self {
             &Action::Insert(ref s) => Action::Delete(s.clone()),
             &Action::Delete(ref s) => Action::Insert(s.clone()),
-            &Action::Move { ref from, ref to } => {
-                Action::Move {
-                    from: to.clone(),
-                    to: from.clone(),
-                }
-            }
+            &Action::Move(ref rel) => Action::Move(-rel),
         }
     }
 
@@ -84,12 +77,12 @@ impl Action {
                 };
                 s.push_str(act_string)
             }
-            &mut Action::Move { from: _, ref mut to } => {
-                let act_to = match act {
-                    Action::Move { from: _, to: val } => val.clone(),
+            &mut Action::Move(ref mut rel) => {
+                let act_rel = match act {
+                    Action::Move(a) => a,
                     _ => panic!("Trying to join dissimilar Actions"),
                 };
-                *to = act_to;
+                *rel += act_rel;
             }
         }
     }
