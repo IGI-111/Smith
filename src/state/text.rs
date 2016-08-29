@@ -17,7 +17,7 @@ impl Text {
     pub fn empty() -> Text {
         Text {
             pos: 0,
-            text: Rope::new(),
+            text: Rope::from_str("\n"),
             name: String::new(),
         }
     }

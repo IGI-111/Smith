@@ -1,11 +1,9 @@
 [package]
 name = "gauge"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["IGI-111 <igi.222@gmail.com>"]
 
 [dependencies]
 clipboard = "*"
-ropey = "*"
-
-[dependencies.termion]
-git = "https://github.com/ticki/termion.git"
+ropey = "0.3.0"
+termion = "1.0.6"

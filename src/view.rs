@@ -1,7 +1,9 @@
 use state::{Editable, Named};
 use std::cmp;
 use std::io::{stdout, Stdout, Write, Result};
-use termion::{Style, TermWrite, IntoRawMode, RawTerminal, terminal_size};
+use termion::terminal_size;
+use termion::raw::{IntoRawMode, RawTerminal};
+use termion::{clear, style, cursor};
 
 pub struct View {
     stdout: RawTerminal<Stdout>,
@@ -12,8 +14,7 @@ pub struct View {
 impl View {
     pub fn new() -> Result<View> {
         let mut stdout = stdout().into_raw_mode().unwrap();
-        try!(stdout.clear());
-        try!(stdout.show_cursor());
+        try!(write!(stdout, "{}{}", clear::All, cursor::Show));
         Ok(View {
             stdout: stdout,
             message: None,
@@ -38,7 +39,7 @@ impl View {
     pub fn render<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named
     {
-        try!(self.stdout.clear());
+        try!(write!(self.stdout, "{}", clear::All));
         try!(self.paint_lines(content));
         try!(self.paint_status(content));
         try!(self.paint_message());
@@ -51,8 +52,7 @@ impl View {
         match self.message {
             Some(ref message) => {
                 let y = self.lines_height() + 1;
-                try!(self.stdout.goto(0, y as u16));
-                try!(write!(self.stdout, "{}", message));
+                try!(write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message));
                 try!(self.stdout.flush());
             }
             None => {}
@@ -63,9 +63,9 @@ impl View {
     fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
         where T: Editable
     {
-        //TODO: if there is a prompt, draw the cursor at the right position
+        // TODO: if there is a prompt, draw the cursor at the right position
         let (x, y) = self.cursor_pos(content);
-        try!(self.stdout.goto(x as u16, y as u16));
+        try!(write!(self.stdout, "{}", cursor::Goto(1 + x as u16, 1 + y as u16)));
         Ok(())
     }
 
@@ -81,20 +81,21 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        try!(self.stdout.style(Style::Invert));
-
-        try!(self.stdout.goto(0, y));
-        try!(write!(self.stdout, "{}", empty_line));
-
-        try!(self.stdout.goto(0, y));
-        try!(write!(self.stdout, "{}", content.name()));
+        try!(write!(self.stdout,
+                    "{}{}{}{}{}",
+                    style::Invert,
+                    cursor::Goto(1, 1 + y),
+                    empty_line,
+                    cursor::Goto(1, 1 + y),
+                    content.name()));
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        try!(self.stdout.goto(x, y));
-        try!(write!(self.stdout, "{}", position_info));
-
-        try!(self.stdout.style(Style::Reset));
+        try!(write!(self.stdout,
+                    "{}{}{}",
+                    cursor::Goto(1 + x, 1 + y),
+                    position_info,
+                    style::Reset));
         Ok(())
     }
 
@@ -112,11 +113,13 @@ impl View {
         for (relative_number, line) in window {
             let absolute_number = relative_number + line_offset as usize;
 
-            try!(self.stdout.goto(0, y));
-            try!(write!(self.stdout, "{}", (absolute_number + 1).to_string()));
+            try!(write!(self.stdout,
+                        "{}{}",
+                        cursor::Goto(1, 1 + y),
+                        absolute_number + 1));
 
             let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
-            try!(self.stdout.goto(line_start, y));
+            try!(write!(self.stdout, "{}", cursor::Goto(1 + line_start, 1 + y)));
             for c in line.char_iter() {
                 try!(write!(self.stdout, "{}", c));
             }
@@ -135,8 +138,7 @@ impl View {
     }
 
     fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
-        let max_in_window = self.line_offset(line)
-            + self.lines_height() + 2;
+        let max_in_window = self.line_offset(line) + self.lines_height() + 2;
         let max = cmp::min(max_in_window, line_count as u16);
         max.to_string().len() as u16
     }

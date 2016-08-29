@@ -13,7 +13,7 @@ use std::env;
 use state::{Text, Recorded, Select};
 use view::View;
 use std::io::stdin;
-use termion::TermRead;
+use termion::input::TermRead;
 use command::Command;
 
 fn main() {

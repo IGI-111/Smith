@@ -1,5 +1,5 @@
 use state::{Editable, Undoable, Saveable, Movement};
-use termion::Key;
+use termion::event::Key;
 use view::View;
 use clipboard::ClipboardContext;
 
