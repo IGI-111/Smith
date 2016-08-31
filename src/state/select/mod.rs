@@ -10,14 +10,14 @@ pub trait Selectable {
 }
 
 pub struct Select<T>
-where T: Editable
+    where T: Editable
 {
     pub content: T,
     pub sel: Option<Selection>,
 }
 
 impl<T> Select<T>
-where T: Editable
+    where T: Editable
 {
     pub fn new(content: T) -> Select<T> {
         Select {
@@ -28,7 +28,7 @@ where T: Editable
 }
 
 impl<T> Editable for Select<T>
-where T: Editable
+    where T: Editable
 {
     delegate!{
         content:
@@ -45,19 +45,21 @@ where T: Editable
 }
 
 impl<T> Saveable for Select<T>
-where T: Editable + Saveable
+    where T: Editable + Saveable
 {
     delegate!{ content: save() -> Result<()> }
 }
 
 impl<T> Named for Select<T>
-where T: Editable + Named
+    where T: Editable + Named
 {
-    delegate!{ content: name() -> &String }
+    delegate!{ content: name() -> &String,
+        mut set_name(name: String) -> (),
+    }
 }
 
 impl<T> Undoable for Select<T>
-where T: Editable + Undoable
+    where T: Editable + Undoable
 {
     delegate!{
         content:

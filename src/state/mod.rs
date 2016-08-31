@@ -25,6 +25,7 @@ pub trait Editable {
 
 pub trait Named {
     fn name(&self) -> &String;
+    fn set_name(&mut self, name: String);
 }
 
 pub trait Saveable: Named {

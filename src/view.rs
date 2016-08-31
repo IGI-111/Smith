@@ -22,14 +22,15 @@ impl View {
         })
     }
 
-    pub fn message(&mut self, message: String) {
+    pub fn message(&mut self, message: &String) {
         self.is_prompt = false;
-        self.message = Some(message);
+        self.message = Some(message.clone());
     }
 
-    pub fn prompt(&mut self, message: String) {
+    pub fn prompt(&mut self, prompt: &String, message: &String) {
         self.is_prompt = true;
-        self.message = Some(message);
+        let msg = prompt.clone() + &message.clone();
+        self.message = Some(msg);
     }
 
     pub fn quiet(&mut self) {

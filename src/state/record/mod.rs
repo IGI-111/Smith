@@ -130,5 +130,8 @@ where T: Editable + Saveable
 impl<T> Named for Recorded<T>
 where T: Editable + Named
 {
-    delegate!{ content: name() -> &String }
+    delegate!{ content:
+        name() -> &String,
+        mut set_name(name: String) -> (),
+    }
 }
