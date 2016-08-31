@@ -11,3 +11,5 @@ Featuring:
 * line numbers
 * undo/redo
 * standard keybindings (Ctrl-S, Ctrl-Z...)
+* MVC design
+* Rope data structure
