@@ -8,7 +8,7 @@ use termion::{clear, style, cursor};
 pub struct View {
     stdout: RawTerminal<Stdout>,
     message: Option<String>,
-    prompt: Option<String>,
+    is_prompt: bool,
 }
 
 impl View {
@@ -18,22 +18,23 @@ impl View {
         Ok(View {
             stdout: stdout,
             message: None,
-            prompt: None,
+            is_prompt: false,
         })
     }
 
     pub fn message(&mut self, message: String) {
+        self.is_prompt = false;
         self.message = Some(message);
     }
 
-    pub fn prompt(&mut self, prompt: String, message: String) {
+    pub fn prompt(&mut self, message: String) {
+        self.is_prompt = true;
         self.message = Some(message);
-        self.prompt = Some(prompt);
     }
 
     pub fn quiet(&mut self) {
+        self.is_prompt = false;
         self.message = None;
-        self.prompt = None;
     }
 
     pub fn render<T>(&mut self, content: &T) -> Result<()>
@@ -49,13 +50,10 @@ impl View {
     }
 
     fn paint_message(&mut self) -> Result<()> {
-        match self.message {
-            Some(ref message) => {
+        if let Some(ref message) = self.message {
                 let y = self.lines_height() + 1;
                 try!(write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message));
                 try!(self.stdout.flush());
-            }
-            None => {}
         }
         Ok(())
     }
@@ -63,8 +61,12 @@ impl View {
     fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
         where T: Editable
     {
-        // TODO: if there is a prompt, draw the cursor at the right position
-        let (x, y) = self.cursor_pos(content);
+        // in the case of a prompt, the cursor should be drawn in the message line
+        let (x, y) = if self.is_prompt {
+            (self.message.clone().unwrap().len(), self.lines_height() as usize + 1)
+        } else {
+             self.cursor_pos(content)
+        };
         try!(write!(self.stdout, "{}", cursor::Goto(1 + x as u16, 1 + y as u16)));
         Ok(())
     }

@@ -5,7 +5,9 @@ use clipboard::ClipboardContext;
 
 enum State {
     Insert,
-    Prompt,
+    Message(String),
+    Prompt(String),
+    Exit,
 }
 
 pub struct Command {
@@ -20,25 +22,41 @@ impl Command {
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, key: Key) -> bool
         where T: Editable + Saveable + Undoable
     {
-        match self.state {
+        let next_state = match self.state {
             State::Insert => self.treat_insert_event(content, view, key),
-            State::Prompt => self.treat_prompt_event(content, view, key),
-        }
+            State::Prompt(ref current_message) => {
+                self.treat_prompt_event(content, view, key, current_message)
+            }
+            State::Message(_) => self.treat_message_event(content, view, key),
+            State::Exit => panic!("continued after an Exit state"),
+        };
+        if let State::Exit = next_state { return true; }
+        self.state = next_state;
+        false
     }
-    pub fn treat_insert_event<T>(&mut self, content: &mut T, view: &mut View, key: Key) -> bool
+
+    fn treat_message_event<T>(&self, content: &mut T, view: &mut View, key: Key) -> State
+        where T: Editable + Saveable + Undoable
+    {
+        view.quiet();
+        self.treat_insert_event(content, view, key)
+    }
+
+    fn treat_insert_event<T>(&self, content: &mut T, view: &mut View, key: Key) -> State
         where T: Editable + Saveable + Undoable
     {
         match key {
+            Key::Ctrl('q') => State::Exit,
             Key::Ctrl('s') => {
-                match content.save() {
-                    Err(e) => view.message(e.to_string()),
-                    Ok(_) => view.message(format!("Saved file {}", content.name())),
-                }
+                let msg = match content.save() {
+                    Err(e) => e.to_string(),
+                    Ok(_) => format!("Saved file {}", content.name()),
+                };
+                view.message(msg.clone());
+                State::Message(msg)
             }
             key => {
-                view.quiet();
                 match key {
-                    Key::Ctrl('q') => return true,
                     Key::Ctrl('z') => content.undo(),
                     Key::Ctrl('y') => content.redo(),
                     Key::Ctrl('v') => {
@@ -55,13 +73,25 @@ impl Command {
                     Key::PageDown => content.step(Movement::PageDown(view.lines_height() as usize)),
                     Key::Home => content.step(Movement::LineStart),
                     Key::End => content.step(Movement::LineEnd),
-                    Key::Backspace => { content.delete(); },
+                    Key::Backspace => {
+                        content.delete();
+                    }
                     Key::Char(c) => content.insert(c),
                     _ => {}
-                };
+                }
+                State::Insert
             }
         }
-        false
     }
-    pub fn treat_prompt_event<T>(&mut self, content: &mut T, view: &mut View, key: Key) -> bool { true }
+    fn treat_prompt_event<T>(&self,
+                             content: &mut T,
+                             view: &mut View,
+                             key: Key,
+                             current_message: &String)
+                             -> State {
+        match key {
+            _ => {}
+        };
+        State::Exit
+    }
 }
