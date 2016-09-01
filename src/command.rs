@@ -3,7 +3,6 @@ use termion::event::Key;
 use view::View;
 use clipboard::ClipboardContext;
 
-#[derive(Clone)]
 enum State {
     Insert,
     Message(String),
@@ -23,12 +22,10 @@ impl Command {
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, key: Key) -> bool
         where T: Editable + Saveable + Undoable
     {
-        self.state = match self.state.clone() {
-            State::Insert => treat_insert_event(content, view, key),
-            State::Prompt(prompt, message) => {
-                treat_prompt_event(content, view, key, prompt, message)
-            }
-            State::Message(_) => treat_message_event(content, view, key),
+        match self.state {
+            State::Insert => treat_insert_event(content, view, key, &mut self.state),
+            State::Prompt(_, _) => treat_prompt_event(content, view, key, &mut self.state),
+            State::Message(_) => treat_message_event(content, view, key, &mut self.state),
             State::Exit => panic!("continued after an Exit state"),
         };
         if let State::Exit = self.state {
@@ -38,23 +35,25 @@ impl Command {
     }
 }
 
-fn treat_message_event<T>(content: &mut T, view: &mut View, key: Key) -> State
+fn treat_message_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
     view.quiet();
-    treat_insert_event(content, view, key)
+    treat_insert_event(content, view, key, state)
 }
 
-fn treat_insert_event<T>(content: &mut T, view: &mut View, key: Key) -> State
+fn treat_insert_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
     match key {
-        Key::Ctrl('q') => State::Exit,
+        Key::Ctrl('q') => {
+            *state = State::Exit;
+        }
         Key::Ctrl('s') => {
             let prompt = "Save to: ".to_string();
             let message = content.name().clone();
             view.prompt(&prompt, &message);
-            State::Prompt(prompt, message)
+            *state = State::Prompt(prompt, message);
         }
         key => {
             match key {
@@ -80,42 +79,51 @@ fn treat_insert_event<T>(content: &mut T, view: &mut View, key: Key) -> State
                 Key::Char(c) => content.insert(c),
                 _ => {}
             }
-            State::Insert
+            *state = State::Insert;
         }
     }
 }
-fn treat_prompt_event<T>(content: &mut T,
-                         view: &mut View,
-                         key: Key,
-                         prompt: String,
-                         mut message: String)
-                         -> State
+fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
     match key {
         Key::Char('\n') => {
-            let old_name = content.name().clone();
-            content.set_name(message);
-            let msg = match content.save() {
-                Err(e) => {
-                    content.set_name(old_name);
-                    e.to_string()
-                },
-                Ok(_) => format!("Saved file {}", content.name()),
-            };
-            view.message(&msg);
-            State::Message(msg)
+            let msg: String;
+            if let State::Prompt(_, ref mut message) = *state {
+                let old_name = content.name().clone();
+                content.set_name(message.clone());
+                msg = match content.save() {
+                    Err(e) => {
+                        content.set_name(old_name);
+                        e.to_string()
+                    }
+                    Ok(_) => format!("Saved file {}", content.name()),
+                };
+                view.message(&msg);
+            } else {
+                panic!("Treating prompt event when even is not a Prompt");
+            }
+            *state = State::Message(msg);
         }
         Key::Char(c) => {
-            message.push(c);
-            view.prompt(&prompt, &message);
-            State::Prompt(prompt, message)
+            if let State::Prompt(ref prompt, ref mut message) = *state {
+                message.push(c);
+                view.prompt(&prompt, &message);
+            } else {
+                panic!("Treating prompt event when even is not a Prompt");
+            }
         }
         Key::Backspace => {
-            message.pop();
-            view.prompt(&prompt, &message);
-            State::Prompt(prompt, message)
+            if let State::Prompt(ref prompt, ref mut message) = *state {
+                message.pop();
+                view.prompt(&prompt, &message);
+            } else {
+                panic!("Treating prompt event when even is not a Prompt");
+            }
         }
-        _ => State::Prompt(prompt, message),
+        Key::Ctrl('q') => {
+            *state = State::Exit;
+        }
+        _ => {}
     }
 }
