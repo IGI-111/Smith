@@ -28,20 +28,17 @@ fn main() {
 }
 
 fn edit_file(filename: Option<String>) {
-    let ref mut text = build_text(filename);
-    let ref mut view = View::new().unwrap();
+    let mut text = build_text(filename);
+    let mut view = View::new().unwrap();
     let mut command = Command::new();
 
-    view.render(text).unwrap();
+    view.render(&text).unwrap();
 
     let mut stdin = stdin().keys();
     loop {
-        match stdin.next() {
-            Some(key) => {
-                if command.treat_event(text, view, key.unwrap()) { break; }
-                view.render(text).unwrap();
-            },
-            None => {},
+        if let Some(key) = stdin.next() {
+            if command.treat_event(&mut text, &mut view, key.unwrap()) { break; }
+            view.render(&text).unwrap();
         }
     }
 }

@@ -1,3 +1,5 @@
+#![allow(absurd_extreme_comparisons)]
+
 mod action;
 
 use std::collections::VecDeque;
@@ -78,9 +80,9 @@ impl<T> Editable for Recorded<T>
 where T: Editable
 {
     fn step(&mut self, mov: Movement) {
-        let from = self.content.pos().clone();
+        let from = self.content.pos();
         self.content.step(mov);
-        let to = self.content.pos().clone();
+        let to = self.content.pos();
         self.record(Action::Move(to as isize - from as isize));
     }
 
@@ -100,13 +102,10 @@ where T: Editable
 
     fn delete(&mut self) -> Option<char> {
         let c = self.content.delete();
-        match c {
-            Some(c) => {
-                let mut s = String::new();
-                s.push(c);
-                self.record(Action::Delete(s))
-            }
-            None => {}
+        if let Some(c) = c {
+            let mut s = String::new();
+            s.push(c);
+            self.record(Action::Delete(s))
         }
         c
     }

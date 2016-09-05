@@ -22,14 +22,14 @@ impl View {
         })
     }
 
-    pub fn message(&mut self, message: &String) {
+    pub fn message(&mut self, message: &str) {
         self.is_prompt = false;
-        self.message = Some(message.clone());
+        self.message = Some(String::from(message));
     }
 
-    pub fn prompt(&mut self, prompt: &String, message: &String) {
+    pub fn prompt(&mut self, prompt: &str, message: &str) {
         self.is_prompt = true;
-        let msg = prompt.clone() + &message.clone();
+        let msg = String::from(prompt) + message;
         self.message = Some(msg);
     }
 

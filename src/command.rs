@@ -108,7 +108,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
         Key::Char(c) => {
             if let State::Prompt(ref prompt, ref mut message) = *state {
                 message.push(c);
-                view.prompt(&prompt, &message);
+                view.prompt(prompt, message);
             } else {
                 panic!("Treating prompt event when even is not a Prompt");
             }
@@ -116,7 +116,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
         Key::Backspace => {
             if let State::Prompt(ref prompt, ref mut message) = *state {
                 message.pop();
-                view.prompt(&prompt, &message);
+                view.prompt(prompt, message);
             } else {
                 panic!("Treating prompt event when even is not a Prompt");
             }

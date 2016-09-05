@@ -46,7 +46,7 @@ impl Text {
 
 impl Saveable for Text {
     fn save(&self) -> Result<()> {
-        if self.name.len() <= 0 {
+        if self.name.is_empty() {
             return Err(Error::new(ErrorKind::InvalidInput, "Can't write file with no name"));
         }
         let mut file = try!(File::create(&self.name));
