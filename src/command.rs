@@ -101,7 +101,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
                 };
                 view.message(&msg);
             } else {
-                panic!("Treating prompt event when even is not a Prompt");
+                panic!("Treating prompt event when event is not a Prompt");
             }
             *state = State::Message(msg);
         }
@@ -110,7 +110,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
                 message.push(c);
                 view.prompt(prompt, message);
             } else {
-                panic!("Treating prompt event when even is not a Prompt");
+                panic!("Treating prompt event when event is not a Prompt");
             }
         }
         Key::Backspace => {
@@ -118,7 +118,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
                 message.pop();
                 view.prompt(prompt, message);
             } else {
-                panic!("Treating prompt event when even is not a Prompt");
+                panic!("Treating prompt event when event is not a Prompt");
             }
         }
         Key::Ctrl('q') => {
