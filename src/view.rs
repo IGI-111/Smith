@@ -2,18 +2,19 @@ use state::{Editable, Named};
 use std::cmp;
 use std::io::{stdout, Stdout, Write, Result};
 use termion::terminal_size;
+use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor};
 
 pub struct View {
-    stdout: RawTerminal<Stdout>,
+    stdout: MouseTerminal<RawTerminal<Stdout>>,
     message: Option<String>,
     is_prompt: bool,
 }
 
 impl View {
     pub fn new() -> Result<View> {
-        let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
         try!(write!(stdout, "{}{}", clear::All, cursor::Show));
         Ok(View {
             stdout: stdout,
@@ -52,9 +53,9 @@ impl View {
 
     fn paint_message(&mut self) -> Result<()> {
         if let Some(ref message) = self.message {
-                let y = self.lines_height() + 1;
-                try!(write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message));
-                try!(self.stdout.flush());
+            let y = self.lines_height() + 1;
+            try!(write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message));
+            try!(self.stdout.flush());
         }
         Ok(())
     }
@@ -66,7 +67,7 @@ impl View {
         let (x, y) = if self.is_prompt {
             (self.message.clone().unwrap().len(), self.lines_height() as usize + 1)
         } else {
-             self.cursor_pos(content)
+            self.cursor_pos(content)
         };
         try!(write!(self.stdout, "{}", cursor::Goto(1 + x as u16, 1 + y as u16)));
         Ok(())
@@ -140,13 +141,13 @@ impl View {
         ((self.line_number_width(line, content.line_count()) as usize + 1 + column), y)
     }
 
-    fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
+    pub fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
         let max_in_window = self.line_offset(line) + self.lines_height() + 2;
         let max = cmp::min(max_in_window, line_count as u16);
         max.to_string().len() as u16
     }
 
-    fn line_offset(&self, line: usize) -> u16 {
+    pub fn line_offset(&self, line: usize) -> u16 {
         match line.checked_sub(self.lines_height() as usize / 2) {
             None => 0,
             Some(val) => val as u16,

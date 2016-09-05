@@ -79,7 +79,7 @@ impl Editable for Text {
                 }
             }
             Movement::Down => {
-                if self.line() < self.line_count()-1 {
+                if self.line() < self.line_count() - 1 {
                     let next_line = self.text.line_index_to_char_index(self.line() + 1);
                     let next_line_size =
                         self.text.line_iter().nth(self.line() + 1).unwrap().char_count();
@@ -96,7 +96,7 @@ impl Editable for Text {
             }
             Movement::PageDown(down) => {
                 let target_line = if self.line_count() - self.line() < down {
-                    self.line_count()-1
+                    self.line_count() - 1
                 } else {
                     self.line() + down
                 };
@@ -108,7 +108,7 @@ impl Editable for Text {
                 }
             }
             Movement::Right => {
-                if self.pos < self.text.char_count()-1 {
+                if self.pos < self.text.char_count() - 1 {
                     self.pos += 1;
                 }
             }
@@ -144,6 +144,13 @@ impl Editable for Text {
     fn move_to(&mut self, pos: usize) {
         assert!(pos < self.text.char_count());
         self.pos = pos;
+    }
+
+
+    fn move_at(&mut self, line: usize, col: usize) {
+        let line = cmp::min(line, self.line_count()-1);
+        let col = cmp::min(col, self.text.line_iter().nth(line).unwrap().char_count()-1);
+        self.pos = self.text.line_index_to_char_index(line) + col;
     }
 
     fn pos(&self) -> usize {

@@ -13,6 +13,7 @@ use ropey::Rope;
 pub trait Editable {
     fn step(&mut self, mov: Movement);
     fn move_to(&mut self, pos: usize);
+    fn move_at(&mut self, line: usize, col: usize);
     fn insert(&mut self, c: char);
     fn delete(&mut self) -> Option<char>;
     fn pos(&self) -> usize;
@@ -20,7 +21,6 @@ pub trait Editable {
     fn col(&self) -> usize;
     fn line_count(&self) -> usize;
     fn as_rope(&self) -> &Rope;
-
 }
 
 pub trait Named {

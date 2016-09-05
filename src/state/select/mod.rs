@@ -34,6 +34,7 @@ impl<T> Editable for Select<T>
         content:
             mut step(mov: Movement) -> (),
             mut move_to(pos: usize) -> (),
+            mut move_at(line: usize, col: usize) -> (),
             mut insert(c: char) -> (),
             mut delete() -> Option<char>,
             pos() -> usize,

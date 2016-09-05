@@ -1,3 +1,4 @@
+#![allow(unknown_lints)]
 #![allow(absurd_extreme_comparisons)]
 
 mod action;
@@ -89,6 +90,13 @@ where T: Editable
     fn move_to(&mut self, pos: usize) {
         let from = self.content.pos();
         self.content.move_to(pos);
+        let to = self.content.pos();
+        self.record(Action::Move(to as isize - from as isize));
+    }
+
+    fn move_at(&mut self, line: usize, col: usize) {
+        let from = self.content.pos();
+        self.content.move_at(line, col);
         let to = self.content.pos();
         self.record(Action::Move(to as isize - from as isize));
     }

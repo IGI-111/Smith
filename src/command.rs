@@ -1,7 +1,8 @@
 use state::{Editable, Undoable, Saveable, Movement};
-use termion::event::Key;
+use termion::event::{Event, Key, MouseEvent, MouseButton};
 use view::View;
 use clipboard::ClipboardContext;
+use std::cmp;
 
 enum State {
     Insert,
@@ -19,13 +20,13 @@ impl Command {
         Command { state: State::Insert }
     }
 
-    pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, key: Key) -> bool
+    pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
         where T: Editable + Saveable + Undoable
     {
         match self.state {
-            State::Insert => treat_insert_event(content, view, key, &mut self.state),
-            State::Prompt(_, _) => treat_prompt_event(content, view, key, &mut self.state),
-            State::Message(_) => treat_message_event(content, view, key, &mut self.state),
+            State::Insert => treat_insert_event(content, view, event, &mut self.state),
+            State::Prompt(_, _) => treat_prompt_event(content, view, event, &mut self.state),
+            State::Message(_) => treat_message_event(content, view, event, &mut self.state),
             State::Exit => panic!("continued after an Exit state"),
         };
         if let State::Exit = self.state {
@@ -35,59 +36,69 @@ impl Command {
     }
 }
 
-fn treat_message_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
+fn treat_message_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
     view.quiet();
-    treat_insert_event(content, view, key, state)
+    treat_insert_event(content, view, event, state)
 }
 
-fn treat_insert_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
+fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
-    match key {
-        Key::Ctrl('q') => {
+    match event {
+        Event::Key(Key::Ctrl('q')) => {
             *state = State::Exit;
         }
-        Key::Ctrl('s') => {
+        Event::Key(Key::Ctrl('s')) => {
             let prompt = "Save to: ".to_string();
             let message = content.name().clone();
             view.prompt(&prompt, &message);
             *state = State::Prompt(prompt, message);
         }
-        key => {
-            match key {
-                Key::Ctrl('z') => content.undo(),
-                Key::Ctrl('y') => content.redo(),
-                Key::Ctrl('v') => {
+        event => {
+            match event {
+                Event::Mouse(MouseEvent::Press(MouseButton::Left, x, y)) => {
+                    // FIXME: this should be handled somewhere else (in the view?)
+                    let line = y as isize + view.line_offset(content.line()) as isize - 1;
+                    let col = cmp::max(0, x as isize - view.line_number_width(content.line(), content.line_count()) as isize - 2);
+                    content.move_at(line as usize, col as usize);
+                }
+                Event::Key(Key::Ctrl('z')) => content.undo(),
+                Event::Key(Key::Ctrl('y')) => content.redo(),
+                Event::Key(Key::Ctrl('v')) => {
                     let ctx = ClipboardContext::new().unwrap();
                     for c in ctx.get_contents().unwrap().chars() {
                         content.insert(c);
                     }
                 }
-                Key::Up => content.step(Movement::Up),
-                Key::Down => content.step(Movement::Down),
-                Key::Left => content.step(Movement::Left),
-                Key::Right => content.step(Movement::Right),
-                Key::PageUp => content.step(Movement::PageUp(view.lines_height() as usize)),
-                Key::PageDown => content.step(Movement::PageDown(view.lines_height() as usize)),
-                Key::Home => content.step(Movement::LineStart),
-                Key::End => content.step(Movement::LineEnd),
-                Key::Backspace => {
+                Event::Key(Key::Up) => content.step(Movement::Up),
+                Event::Key(Key::Down) => content.step(Movement::Down),
+                Event::Key(Key::Left) => content.step(Movement::Left),
+                Event::Key(Key::Right) => content.step(Movement::Right),
+                Event::Key(Key::PageUp) => {
+                    content.step(Movement::PageUp(view.lines_height() as usize))
+                }
+                Event::Key(Key::PageDown) => {
+                    content.step(Movement::PageDown(view.lines_height() as usize))
+                }
+                Event::Key(Key::Home) => content.step(Movement::LineStart),
+                Event::Key(Key::End) => content.step(Movement::LineEnd),
+                Event::Key(Key::Backspace) => {
                     content.delete();
                 }
-                Key::Char(c) => content.insert(c),
+                Event::Key(Key::Char(c)) => content.insert(c),
                 _ => {}
             }
             *state = State::Insert;
         }
     }
 }
-fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut State)
+fn treat_prompt_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Saveable + Undoable
 {
-    match key {
-        Key::Char('\n') => {
+    match event {
+        Event::Key(Key::Char('\n')) => {
             let msg: String;
             if let State::Prompt(_, ref mut message) = *state {
                 let old_name = content.name().clone();
@@ -105,7 +116,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
             }
             *state = State::Message(msg);
         }
-        Key::Char(c) => {
+        Event::Key(Key::Char(c)) => {
             if let State::Prompt(ref prompt, ref mut message) = *state {
                 message.push(c);
                 view.prompt(prompt, message);
@@ -113,7 +124,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
                 panic!("Treating prompt event when event is not a Prompt");
             }
         }
-        Key::Backspace => {
+        Event::Key(Key::Backspace) => {
             if let State::Prompt(ref prompt, ref mut message) = *state {
                 message.pop();
                 view.prompt(prompt, message);
@@ -121,7 +132,7 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, key: Key, state: &mut
                 panic!("Treating prompt event when event is not a Prompt");
             }
         }
-        Key::Ctrl('q') => {
+        Event::Key(Key::Ctrl('q')) => {
             *state = State::Exit;
         }
         _ => {}
