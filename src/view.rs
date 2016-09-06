@@ -97,7 +97,8 @@ impl View {
         let y = self.lines_height() as u16;
 
         try!(write!(self.stdout,
-                    "{}{}{}{}{}",
+                    "{}{}{}{}{}{}",
+                    color::Fg(color::White),
                     style::Invert,
                     cursor::Goto(1, 1 + y),
                     empty_line,
@@ -140,9 +141,11 @@ impl View {
         {
             let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
             try!(write!(self.stdout,
-                        "{}{}{}",
+                        "{}{}{}{}{}",
+                        color::Fg(color::White),
                         cursor::Goto(1, 1),
                         line_offset + 1,
+                        style::Reset,
                         cursor::Goto(1 + line_start, 1)));
         }
         let mut y = 1;
@@ -150,16 +153,22 @@ impl View {
             if c == '\n' {
                 let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
                 try!(write!(self.stdout,
-                            "{}{}{}",
+                            "{}{}{}{}{}",
+                            color::Fg(color::White),
                             cursor::Goto(1, 1 + y),
                             lines,
+                            style::Reset,
                             cursor::Goto(1 + line_start, 1 + y)));
                 y += 1;
             } else if match *content.sel() {
-                Some((beg, end)) => chars > beg && chars <= end+1,
+                Some((beg, end)) => chars > beg && chars <= end + 1,
                 None => false,
             } {
-                try!(write!(self.stdout, "{}{}{}", color::Bg(color::White), c, style::Reset));
+                try!(write!(self.stdout,
+                            "{}{}{}",
+                            color::Bg(color::White),
+                            c,
+                            style::Reset));
             } else {
                 try!(write!(self.stdout, "{}", c));
             }

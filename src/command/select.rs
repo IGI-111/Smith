@@ -49,7 +49,7 @@ fn delete_sel<T>(content: &mut T)
     where T: Selectable + Editable
 {
     let (beg, end) = content.sel().unwrap();
-    let end = cmp::min(end+1, content.len()-1);
+    let end = cmp::min(end + 1, content.len() - 1);
     content.move_to(end);
     for _ in beg..end {
         content.delete();
@@ -64,12 +64,16 @@ pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, sta
         let (line, col) = view.translate_coordinates(content, x, y);
         content.move_at(line, col);
         if let State::Select(origin) = *state {
-            let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
-            content.set_sel(sel);
+            if origin != content.pos() {
+                let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+                content.set_sel(sel);
+                *state = State::Selected;
+            } else {
+                *state = State::Insert;
+            }
         } else {
             panic!("Treating select event when event is not a Select");
         }
 
-        *state = State::Selected;
     }
 }
