@@ -156,10 +156,10 @@ impl View {
                             cursor::Goto(1 + line_start, 1 + y)));
                 y += 1;
             } else if match *content.sel() {
-                Some((beg, end)) => chars > beg && chars <= end,
+                Some((beg, end)) => chars > beg && chars <= end+1,
                 None => false,
             } {
-                try!(write!(self.stdout, "{}{}{}{}", color::Fg(color::White), style::Invert, c, style::Reset));
+                try!(write!(self.stdout, "{}{}{}", color::Bg(color::White), c, style::Reset));
             } else {
                 try!(write!(self.stdout, "{}", c));
             }
