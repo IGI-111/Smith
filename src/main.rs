@@ -48,8 +48,8 @@ fn edit_file(filename: Option<String>) {
     }
 }
 
-fn build_text(filename: Option<String>) -> Recorded<Select<Text>> {
-    Recorded::new(Select::new(match filename {
+fn build_text(filename: Option<String>) -> Select<Recorded<Text>> {
+    Select::new(Recorded::new(match filename {
         Some(name) => {
             match Text::open_file(name) {
                 Ok(v) => v,

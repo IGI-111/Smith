@@ -5,7 +5,7 @@ mod action;
 
 use std::collections::VecDeque;
 use std::io::Result;
-use super::{Movement, Editable, Saveable, Named};
+use super::{Movement, Editable, Saveable, Named, CharIter};
 use self::action::Action;
 use ropey::Rope;
 use std::usize;
@@ -124,7 +124,8 @@ where T: Editable
             line() -> usize,
             col() -> usize,
             line_count() -> usize,
-            as_rope() -> &Rope,
+            len() -> usize,
+            iter() -> CharIter,
     }
 }
 

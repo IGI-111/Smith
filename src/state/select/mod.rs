@@ -1,12 +1,13 @@
-use super::{Movement, Editable, Saveable, Named, Undoable};
+use super::{Movement, Editable, Saveable, Named, Undoable, CharIter};
 use std::io::Result;
 use ropey::Rope;
 
 pub type Selection = (usize, usize);
 
 pub trait Selectable {
-    fn selection(&self) -> &(usize, usize);
-    fn select(&mut self, (usize, usize));
+    fn sel(&self) -> &Option<Selection>;
+    fn set_sel(&mut self, selection: Selection);
+    fn reset_sel(&mut self);
 }
 
 pub struct Select<T>
@@ -27,6 +28,22 @@ impl<T> Select<T>
     }
 }
 
+impl<T> Selectable for Select<T>
+    where T: Editable
+{
+    fn sel(&self) -> &Option<Selection> {
+        &self.sel
+    }
+
+    fn set_sel(&mut self, selection: Selection) {
+        self.sel = Some(selection);
+    }
+
+    fn reset_sel(&mut self) {
+        self.sel = None;
+    }
+}
+
 impl<T> Editable for Select<T>
     where T: Editable
 {
@@ -41,7 +58,8 @@ impl<T> Editable for Select<T>
             line() -> usize,
             col() -> usize,
             line_count() -> usize,
-            as_rope() -> &Rope,
+            len() -> usize,
+            iter() -> CharIter,
     }
 }
 

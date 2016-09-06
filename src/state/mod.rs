@@ -5,10 +5,10 @@ mod select;
 pub use self::text::Text;
 pub use self::record::Recorded;
 pub use self::record::Undoable;
-pub use self::select::Select;
+pub use self::select::{Select, Selectable};
 
 use std::io::Result;
-use ropey::Rope;
+use ropey::{Rope, RopeCharIter};
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
@@ -20,8 +20,11 @@ pub trait Editable {
     fn line(&self) -> usize;
     fn col(&self) -> usize;
     fn line_count(&self) -> usize;
-    fn as_rope(&self) -> &Rope;
+    fn len(&self) -> usize;
+    fn iter(&self) -> CharIter;
 }
+
+pub type CharIter<'a> = RopeCharIter<'a>;
 
 pub trait Named {
     fn name(&self) -> &String;

@@ -4,7 +4,7 @@ use std::fs::File;
 use std::cmp;
 use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
-use super::{Movement, Editable, Named, Saveable};
+use super::{Movement, Editable, Named, Saveable, CharIter};
 
 #[derive(Debug)]
 pub struct Text {
@@ -169,7 +169,11 @@ impl Editable for Text {
         self.text.line_ending_count()
     }
 
-    fn as_rope(&self) -> &Rope {
-        &self.text
+    fn len(&self) -> usize {
+        self.text.char_count()
+    }
+
+    fn iter(&self) -> CharIter {
+        self.text.char_iter()
     }
 }
