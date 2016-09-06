@@ -1,10 +1,13 @@
+mod select;
+
 use state::{Named, Editable, Undoable, Saveable, Selectable, Movement};
 use termion::event::{Event, Key, MouseEvent, MouseButton};
 use view::View;
-use std::cmp;
 use clipboard::ClipboardContext;
+use self::select::{treat_select_event, treat_selected_event};
 
-enum State {
+#[derive(Debug)]
+pub enum State {
     Insert,
     Message,
     Prompt(String, String),
@@ -24,44 +27,31 @@ impl Command {
 
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
         where T: Editable + Saveable + Undoable + Selectable
-        {
-            match self.state {
-                State::Insert => treat_insert_event(content, view, event, &mut self.state),
-                State::Prompt(_, _) => treat_prompt_event(content, view, event, &mut self.state),
-                State::Message => treat_message_event(content, view, event, &mut self.state),
-                State::Select(_) => treat_select_event(content, view, event, &mut self.state),
-                State::Selected => treat_selected_event(content, view, event, &mut self.state),
-                State::Exit => panic!("continued after an Exit state"),
-            };
-            if let State::Exit = self.state {
-                return true;
-            }
-            false
+    {
+        match self.state {
+            State::Insert => treat_insert_event(content, view, event, &mut self.state),
+            State::Prompt(_, _) => treat_prompt_event(content, view, event, &mut self.state),
+            State::Message => treat_message_event(content, view, event, &mut self.state),
+            State::Select(_) => treat_select_event(content, view, event, &mut self.state),
+            State::Selected => treat_selected_event(content, view, event, &mut self.state),
+            State::Exit => panic!("continued after an Exit state"),
+        };
+        if let State::Exit = self.state {
+            return true;
         }
+        false
+    }
 }
 
-fn treat_message_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
+pub fn treat_message_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Named + Undoable
 {
     view.quiet();
+    *state = State::Insert;
     treat_insert_event(content, view, event, state)
 }
 
-fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
-    where T: Selectable + Editable + Named + Undoable
-{
-    let res = match event {
-        // TODO remove, copy etc
-        _ => {
-            treat_insert_event(content, view, event, state);
-            *state = State::Insert;
-        }
-    };
-    content.reset_sel();
-    res
-}
-
-fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
+pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Named + Undoable
 {
     match event {
@@ -91,12 +81,8 @@ fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, state: 
         Event::Key(Key::Down) => content.step(Movement::Down),
         Event::Key(Key::Left) => content.step(Movement::Left),
         Event::Key(Key::Right) => content.step(Movement::Right),
-        Event::Key(Key::PageUp) => {
-            content.step(Movement::PageUp(view.lines_height() as usize))
-        }
-        Event::Key(Key::PageDown) => {
-            content.step(Movement::PageDown(view.lines_height() as usize))
-        }
+        Event::Key(Key::PageUp) => content.step(Movement::PageUp(view.lines_height() as usize)),
+        Event::Key(Key::PageDown) => content.step(Movement::PageDown(view.lines_height() as usize)),
         Event::Key(Key::Home) => content.step(Movement::LineStart),
         Event::Key(Key::End) => content.step(Movement::LineEnd),
         Event::Key(Key::Backspace) => {
@@ -149,23 +135,5 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, event: Event, state: 
             *state = State::Exit;
         }
         _ => {}
-    }
-}
-
-
-fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
-    where T: Editable + Selectable
-{
-    if let Event::Mouse(MouseEvent::Release(x, y)) = event {
-        let (line, col) = view.translate_coordinates(content, x, y);
-        content.move_at(line, col);
-        if let State::Select(origin) = *state {
-            let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
-            content.set_sel(sel);
-        } else {
-            panic!("Treating select event when event is not a Select");
-        }
-
-        *state = State::Selected;
     }
 }

@@ -71,14 +71,15 @@ impl Action {
                     Action::Insert(a) => a,
                     _ => panic!("Trying to join dissimilar Actions"),
                 };
-                s.push_str(&act_string)
+                s.push_str(&act_string);
             }
             Action::Delete(ref mut s) => {
-                let act_string = match act {
+                let mut act_string = match act {
                     Action::Delete(a) => a,
                     _ => panic!("Trying to join dissimilar Actions"),
                 };
-                s.push_str(&act_string)
+                act_string.push_str(s);
+                *s = act_string;
             }
             Action::Move(ref mut rel) => {
                 let act_rel = match act {

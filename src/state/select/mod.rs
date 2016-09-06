@@ -1,6 +1,5 @@
 use super::{Movement, Editable, Saveable, Named, Undoable, CharIter};
 use std::io::Result;
-use ropey::Rope;
 
 pub type Selection = (usize, usize);
 

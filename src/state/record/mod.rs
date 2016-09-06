@@ -7,7 +7,6 @@ use std::collections::VecDeque;
 use std::io::Result;
 use super::{Movement, Editable, Saveable, Named, CharIter};
 use self::action::Action;
-use ropey::Rope;
 use std::usize;
 
 const HISTORY_SIZE: usize = usize::MAX;

@@ -8,7 +8,7 @@ pub use self::record::Undoable;
 pub use self::select::{Select, Selectable};
 
 use std::io::Result;
-use ropey::{Rope, RopeCharIter};
+use ropey::RopeCharIter;
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
