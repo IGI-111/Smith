@@ -7,6 +7,12 @@ pub trait Selectable {
     fn sel(&self) -> &Option<Selection>;
     fn set_sel(&mut self, selection: Selection);
     fn reset_sel(&mut self);
+    fn in_sel(&self, pos: usize) -> bool {
+        match *self.sel() {
+            Some((beg, end)) => pos > beg && pos <= end + 1,
+            None => false,
+        }
+    }
 }
 
 pub struct Select<T>

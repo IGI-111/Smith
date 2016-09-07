@@ -168,7 +168,7 @@ impl View {
                     }
                     Some(*state)
                 })
-            .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
+                .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
                 .take_while(|&(_, _, lines)| lines <= 1 + line_offset + line_height);
 
         {
@@ -182,8 +182,13 @@ impl View {
                         cursor::Goto(1 + line_start, 1)));
         }
         let mut y = 1;
+        let mut line_len = 0;
         for (c, chars, lines) in window_it {
             if c == '\n' {
+                if line_len == 0 && content.in_sel(chars) {
+                    try!(write!(self.stdout, "{} {}", color::Bg(color::White), style::Reset));
+                }
+                line_len = 0;
                 let line_start = self.line_number_width(line_count) as u16 + 1;
                 try!(write!(self.stdout,
                             "{}{}{}{}{}",
@@ -193,22 +198,22 @@ impl View {
                             style::Reset,
                             cursor::Goto(1 + line_start, 1 + y)));
                 y += 1;
-            } else if match *content.sel() {
-                Some((beg, end)) => chars > beg && chars <= end + 1,
-                None => false,
-            } {
+            } else if content.in_sel(chars) {
                 try!(write!(self.stdout,
                             "{}{}{}",
                             color::Bg(color::White),
                             c,
                             style::Reset));
+                line_len += 1;
             } else {
                 try!(write!(self.stdout, "{}", c));
+                line_len += 1;
             }
         }
 
         Ok(())
     }
+
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
         // TODO: column offsetting for long lines
