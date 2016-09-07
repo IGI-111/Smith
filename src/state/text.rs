@@ -27,6 +27,9 @@ impl Text {
 
             let mut buf = String::new();
             try!(file.read_to_string(&mut buf));
+            if buf.is_empty() {
+                buf = "\n".to_owned();
+            }
             let text = Rope::from_string(buf);
 
             Ok(Text {
@@ -35,11 +38,9 @@ impl Text {
                 name: filename,
             })
         } else {
-            Ok(Text {
-                pos: 0,
-                text: Rope::new(),
-                name: filename,
-            })
+            let mut text = Text::empty();
+            text.set_name(filename);
+            Ok(text)
         }
     }
 }
