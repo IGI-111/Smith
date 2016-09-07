@@ -148,8 +148,9 @@ impl Editable for Text {
 
 
     fn move_at(&mut self, line: usize, col: usize) {
-        let line = cmp::min(line, self.line_count()-1);
-        let col = cmp::min(col, self.text.line_iter().nth(line).unwrap().char_count()-1);
+        let line = cmp::min(line, self.line_count() - 1);
+        let col = cmp::min(col,
+                           self.text.line_iter().nth(line).unwrap().char_count() - 1);
         self.pos = self.text.line_index_to_char_index(line) + col;
     }
 

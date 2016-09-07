@@ -29,20 +29,20 @@ impl Command {
 
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
         where T: Editable + Saveable + Undoable + Selectable
-        {
-            match self.state {
-                State::Insert => treat_insert_event(content, view, event, &mut self.state),
-                State::Prompt(_, _) => treat_prompt_event(content, view, event, &mut self.state),
-                State::Message => treat_message_event(content, view, event, &mut self.state),
-                State::Select(_) => treat_select_event(content, view, event, &mut self.state),
-                State::Selected => treat_selected_event(content, view, event, &mut self.state),
-                State::Exit => panic!("continued after an Exit state"),
-            };
-            if let State::Exit = self.state {
-                return true;
-            }
-            false
+    {
+        match self.state {
+            State::Insert => treat_insert_event(content, view, event, &mut self.state),
+            State::Prompt(_, _) => treat_prompt_event(content, view, event, &mut self.state),
+            State::Message => treat_message_event(content, view, event, &mut self.state),
+            State::Select(_) => treat_select_event(content, view, event, &mut self.state),
+            State::Selected => treat_selected_event(content, view, event, &mut self.state),
+            State::Exit => panic!("continued after an Exit state"),
+        };
+        if let State::Exit = self.state {
+            return true;
         }
+        false
+    }
 }
 
 pub fn treat_message_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)

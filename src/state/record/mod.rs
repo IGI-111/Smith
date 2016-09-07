@@ -18,7 +18,7 @@ pub trait Undoable {
 }
 
 pub struct Recorded<T>
-where T: Editable
+    where T: Editable
 {
     pub content: T,
     pub history: VecDeque<Action>,
@@ -26,7 +26,7 @@ where T: Editable
 }
 
 impl<T> Recorded<T>
-where T: Editable
+    where T: Editable
 {
     pub fn new(content: T) -> Recorded<T> {
         Recorded {
@@ -52,7 +52,7 @@ where T: Editable
 }
 
 impl<T> Undoable for Recorded<T>
-where T: Editable
+    where T: Editable
 {
     fn undo(&mut self) {
         let to_undo = match self.history.pop_front() {
@@ -77,7 +77,7 @@ where T: Editable
 }
 
 impl<T> Editable for Recorded<T>
-where T: Editable
+    where T: Editable
 {
     fn step(&mut self, mov: Movement) {
         let from = self.content.pos();
@@ -129,13 +129,13 @@ where T: Editable
 }
 
 impl<T> Saveable for Recorded<T>
-where T: Editable + Saveable
+    where T: Editable + Saveable
 {
     delegate!{ content: save() -> Result<()> }
 }
 
 impl<T> Named for Recorded<T>
-where T: Editable + Named
+    where T: Editable + Named
 {
     delegate!{ content:
         name() -> &String,
