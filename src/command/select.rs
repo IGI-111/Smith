@@ -27,12 +27,14 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event, s
             ctx.set_contents(selection).unwrap();
 
             delete_sel(content);
+            view.adjust_view(content.line());
 
             content.reset_sel();
             *state = State::Insert;
         }
         Event::Key(Key::Backspace) => {
             delete_sel(content);
+            view.adjust_view(content.line());
             content.reset_sel();
             *state = State::Insert;
         }

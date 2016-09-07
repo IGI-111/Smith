@@ -10,6 +10,7 @@ pub struct View {
     stdout: MouseTerminal<RawTerminal<Stdout>>,
     message: Option<String>,
     is_prompt: bool,
+    line_offset: u16,
 }
 
 impl View {
@@ -20,6 +21,7 @@ impl View {
             stdout: stdout,
             message: None,
             is_prompt: false,
+            line_offset: 0,
         })
     }
 
@@ -39,6 +41,29 @@ impl View {
         self.message = None;
     }
 
+    pub fn center_view(&mut self, line: usize) {
+        self.line_offset = match line.checked_sub(self.lines_height() as usize / 2) {
+            None => 0,
+            Some(val) => val as u16,
+        }
+    }
+
+    pub fn adjust_view(&mut self, line: usize) {
+        let line = line as u16;
+        if line < self.line_offset {
+            self.line_offset = line;
+        } else if line + 1 >= self.line_offset + self.lines_height() {
+            self.line_offset = 1 + line - self.lines_height();
+        }
+    }
+
+    pub fn scroll_view<T: Editable>(&mut self, offset: isize, content: &T) {
+        self.line_offset =
+            cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
+                     (content.line_count() as isize) - 1) as u16;
+
+    }
+
     pub fn render<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named + Selectable
     {
@@ -54,11 +79,9 @@ impl View {
     pub fn translate_coordinates<T>(&self, content: &T, x: u16, y: u16) -> (usize, usize)
         where T: Editable
     {
-        let line = y as isize + self.line_offset(content.line()) as isize - 1;
+        let line = y as isize + self.line_offset as isize - 1;
         let col = cmp::max(0,
-                           x as isize -
-                           self.line_number_width(content.line(), content.line_count()) as isize -
-                           2);
+                           x as isize - self.line_number_width(content.line_count()) as isize - 2);
         (line as usize, col as usize)
     }
 
@@ -74,13 +97,23 @@ impl View {
     fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
         where T: Editable
     {
+        if (content.line() as u16) < self.line_offset ||
+           content.line() as u16 >= self.line_offset + self.lines_height() {
+            try!(write!(self.stdout, "{}", cursor::Hide));
+            return Ok(());
+        }
+
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message.clone().unwrap().len(), self.lines_height() as usize + 1)
+            (self.message.clone().unwrap().len() as u16, self.lines_height() + 1)
         } else {
-            self.cursor_pos(content)
+            let (a, b) = self.cursor_pos(content);
+            (a as u16, b as u16)
         };
-        try!(write!(self.stdout, "{}", cursor::Goto(1 + x as u16, 1 + y as u16)));
+        try!(write!(self.stdout,
+                    "{}{}",
+                    cursor::Show,
+                    cursor::Goto(1 + x, 1 + y)));
         Ok(())
     }
 
@@ -118,28 +151,28 @@ impl View {
     fn paint_lines<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Selectable
     {
-        let line_offset = self.line_offset(content.line());
+        let line_offset = self.line_offset;
         let line_height = self.lines_height();
         let line_count = content.line_count();
 
         let window_it = content.iter()
-            .take(content.len() - 1) // the last endline should be invisible to the user
-            .scan(('\n', 0, 1), |state, k| {
-                {
-                    let (ref mut c, ref mut chars, ref mut lines) = *state;
-                    if *c == '\n' {
-                        *lines += 1;
+                .take(content.len() - 1) // the last endline should be invisible to the user
+                .scan(('\n', 0, 1), |state, k| {
+                    {
+                        let (ref mut c, ref mut chars, ref mut lines) = *state;
+                        if *c == '\n' {
+                            *lines += 1;
+                        }
+                        *chars += 1;
+                        *c = k;
                     }
-                    *chars += 1;
-                    *c = k;
-                }
-                Some(*state)
-            })
+                    Some(*state)
+                })
             .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
-            .take_while(|&(_, _, lines)| lines <= 1 + line_offset + line_height);
+                .take_while(|&(_, _, lines)| lines <= 1 + line_offset + line_height);
 
         {
-            let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
+            let line_start = self.line_number_width(line_count) as u16 + 1;
             try!(write!(self.stdout,
                         "{}{}{}{}{}",
                         color::Fg(color::White),
@@ -151,7 +184,7 @@ impl View {
         let mut y = 1;
         for (c, chars, lines) in window_it {
             if c == '\n' {
-                let line_start = self.line_number_width(content.line(), line_count) as u16 + 1;
+                let line_start = self.line_number_width(line_count) as u16 + 1;
                 try!(write!(self.stdout,
                             "{}{}{}{}{}",
                             color::Fg(color::White),
@@ -181,22 +214,15 @@ impl View {
         // TODO: column offsetting for long lines
         let line = content.line();
         let column = content.col();
-        let first_line = self.line_offset(line);
+        let first_line = self.line_offset;
         let y = line - first_line as usize;
-        ((self.line_number_width(line, content.line_count()) as usize + 1 + column), y)
+        ((self.line_number_width(content.line_count()) as usize + 1 + column), y)
     }
 
-    fn line_number_width(&self, line: usize, line_count: usize) -> u16 {
-        let max_in_window = self.line_offset(line) + self.lines_height() + 2;
+    fn line_number_width(&self, line_count: usize) -> u16 {
+        let max_in_window = self.line_offset + self.lines_height() + 2;
         let max = cmp::min(max_in_window, line_count as u16);
         max.to_string().len() as u16
-    }
-
-    fn line_offset(&self, line: usize) -> u16 {
-        match line.checked_sub(self.lines_height() as usize / 2) {
-            None => 0,
-            Some(val) => val as u16,
-        }
     }
 
     fn status_height(&self) -> u16 {
