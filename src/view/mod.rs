@@ -98,10 +98,11 @@ impl View {
     }
 
     fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
-        where T: Editable
+        where T: Editable + Selectable
     {
         if (content.line() as u16) < self.line_offset ||
-           content.line() as u16 >= self.line_offset + self.lines_height() {
+           content.line() as u16 >= self.line_offset + self.lines_height() ||
+           content.sel().is_some() {
             try!(write!(self.stdout, "{}", cursor::Hide));
             return Ok(());
         }
@@ -203,7 +204,7 @@ impl View {
                 y += 1;
             } else {
                 if content.in_sel(chars) {
-                    try!(write!(self.stdout, "{}", color::Bg(color::White)));
+                    try!(write!(self.stdout, "{}", style::Invert));
                 }
                 if c == '\t' {
                     // FIXME: we should probably use gotos instead of relying on character length
