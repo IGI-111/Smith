@@ -19,6 +19,7 @@ pub trait Editable {
     fn pos(&self) -> usize;
     fn line(&self) -> usize;
     fn col(&self) -> usize;
+    fn visual_col(&self, tab_length: usize) -> usize;
     fn line_count(&self) -> usize;
     fn len(&self) -> usize;
     fn iter(&self) -> CharIter;

@@ -1,6 +1,7 @@
 use state::{Selectable, Editable, Named};
 use std::cmp;
 use std::io::{stdout, Stdout, Write, Result};
+use std::iter;
 use termion::terminal_size;
 use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
@@ -12,6 +13,8 @@ pub struct View {
     is_prompt: bool,
     line_offset: u16,
 }
+
+const TAB_LENGTH: usize = 4;
 
 impl View {
     pub fn new() -> Result<View> {
@@ -198,19 +201,22 @@ impl View {
                             style::Reset,
                             cursor::Goto(1 + line_start, 1 + y)));
                 y += 1;
-            } else if content.in_sel(chars) {
-                try!(write!(self.stdout,
-                            "{}{}{}",
-                            color::Bg(color::White),
-                            c,
-                            style::Reset));
-                line_len += 1;
             } else {
-                try!(write!(self.stdout, "{}", c));
+                if content.in_sel(chars) {
+                    try!(write!(self.stdout, "{}", color::Bg(color::White)));
+                }
+                if c == '\t' {
+                    // FIXME: we should probably use gotos instead of relying on character length
+                    try!(write!(self.stdout,
+                                "{}",
+                                iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
+                } else {
+                    try!(write!(self.stdout, "{}", c));
+                }
+                try!(write!(self.stdout, "{}", style::Reset));
                 line_len += 1;
             }
         }
-
         Ok(())
     }
 
@@ -218,9 +224,10 @@ impl View {
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
         // TODO: column offsetting for long lines
         let line = content.line();
-        let column = content.col();
         let first_line = self.line_offset;
         let y = line - first_line as usize;
+        // we can't trust the actual column because tabs have variable length
+        let column = content.visual_col(TAB_LENGTH);
         ((self.line_number_width(content.line_count()) as usize + 1 + column), y)
     }
 

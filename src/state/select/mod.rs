@@ -62,6 +62,7 @@ impl<T> Editable for Select<T>
             pos() -> usize,
             line() -> usize,
             col() -> usize,
+            visual_col(tab_length: usize) -> usize,
             line_count() -> usize,
             len() -> usize,
             iter() -> CharIter,
