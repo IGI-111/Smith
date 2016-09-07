@@ -5,5 +5,5 @@ authors = ["IGI-111 <igi.222@gmail.com>"]
 
 [dependencies]
 clipboard = "*"
-ropey = "0.3.0"
-termion = "1.0.6"
+ropey = "*"
+termion = "*"

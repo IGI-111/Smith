@@ -60,20 +60,33 @@ fn delete_sel<T>(content: &mut T)
 pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
     where T: Editable + Selectable
 {
-    if let Event::Mouse(MouseEvent::Release(x, y)) = event {
-        let (line, col) = view.translate_coordinates(content, x, y);
-        content.move_at(line, col);
-        if let State::Select(origin) = *state {
-            if origin != content.pos() {
+    match event {
+        Event::Mouse(MouseEvent::Hold(x, y)) => {
+            let (line, col) = view.translate_coordinates(content, x, y);
+            content.move_at(line, col);
+            if let State::Select(origin) = *state {
                 let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
                 content.set_sel(sel);
-                *state = State::Selected;
             } else {
-                *state = State::Insert;
+                panic!("Treating select event when event is not a Select");
             }
-        } else {
-            panic!("Treating select event when event is not a Select");
         }
+        Event::Mouse(MouseEvent::Release(x, y)) => {
+            let (line, col) = view.translate_coordinates(content, x, y);
+            content.move_at(line, col);
+            if let State::Select(origin) = *state {
+                if origin != content.pos() {
+                    let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+                    content.set_sel(sel);
+                    *state = State::Selected;
+                } else {
+                    *state = State::Insert;
+                }
+            } else {
+                panic!("Treating select event when event is not a Select");
+            }
 
+        }
+        _ => {}
     }
 }
