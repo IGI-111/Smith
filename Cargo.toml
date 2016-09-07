@@ -1,6 +1,6 @@
 [package]
 name = "gauge"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["IGI-111 <igi.222@gmail.com>"]
 
 [dependencies]
