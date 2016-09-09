@@ -190,7 +190,7 @@ impl View {
         for (c, chars, lines) in window_it {
             if c == '\n' {
                 if line_len == 0 && content.in_sel(chars) {
-                    try!(write!(self.stdout, "{} {}", color::Bg(color::White), style::Reset));
+                    try!(write!(self.stdout, "{} {}", style::Invert, style::Reset));
                 }
                 line_len = 0;
                 let line_start = self.line_number_width(line_count) as u16 + 1;
