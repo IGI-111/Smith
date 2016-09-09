@@ -100,8 +100,11 @@ impl View {
     fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Selectable
     {
+        // FIXME: don't print the cursor if off screen, though we should in the future for long
+        // lines
         if (content.line() as u16) < self.line_offset ||
            content.line() as u16 >= self.line_offset + self.lines_height() ||
+           content.col() as u16 >= self.lines_width(content.line_count()) ||
            content.sel().is_some() {
             try!(write!(self.stdout, "{}", cursor::Hide));
             return Ok(());
@@ -156,7 +159,8 @@ impl View {
         where T: Editable + Selectable
     {
         let line_offset = self.line_offset;
-        let line_height = self.lines_height();
+        let lines_height = self.lines_height();
+        let lines_width = self.lines_width(content.line_count());
         let line_count = content.line_count();
 
         let window_it = content.iter()
@@ -173,7 +177,7 @@ impl View {
                     Some(*state)
                 })
                 .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
-                .take_while(|&(_, _, lines)| lines <= 1 + line_offset + line_height);
+                .take_while(|&(_, _, lines)| lines <= 1 + line_offset + lines_height);
 
         {
             let line_start = self.line_number_width(line_count) as u16 + 1;
@@ -202,6 +206,9 @@ impl View {
                             style::Reset,
                             cursor::Goto(1 + line_start, 1 + y)));
                 y += 1;
+            } else if line_len > lines_width - 1 {
+                // don't print the character
+                line_len += 1;
             } else {
                 if content.in_sel(chars) {
                     try!(write!(self.stdout, "{}", style::Invert));
@@ -244,6 +251,13 @@ impl View {
 
     pub fn lines_height(&self) -> u16 {
         let (_, screen_height) = terminal_size().unwrap();
-        cmp::max(screen_height, self.status_height()) - self.status_height()
+        let incompressible = self.status_height();
+        cmp::max(screen_height, incompressible) - incompressible
+    }
+
+    pub fn lines_width(&self, line_count: usize) -> u16 {
+        let (screen_width, _) = terminal_size().unwrap();
+        let incompressible = self.line_number_width(line_count) + 1;
+        cmp::max(screen_width, incompressible) - incompressible
     }
 }
