@@ -10,7 +10,8 @@ Featuring:
 
 * line numbers
 * undo/redo
-* standard keybindings (Ctrl-S, Ctrl-Z...)
+* standard keybindings (Ctrl-S, Ctrl-Z, Ctrl-C...)
 * mouse support
-* MVC design
-* Rope data structure
+* clipboard support
+
+With more planned such as syntax highlighting, user configurations, search & replace, persistent undo, etc.
