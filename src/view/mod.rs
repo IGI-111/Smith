@@ -112,7 +112,7 @@ impl View {
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message.clone().unwrap().len() as u16, self.lines_height() + 1)
+            (self.message.clone().unwrap().chars().count() as u16, self.lines_height() + 1)
         } else {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
