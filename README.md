@@ -6,7 +6,7 @@
 
 Smith is a simple terminal-based text editor written in Rust.
 
-Featuring:
+## Features
 
 * line numbers
 * undo/redo
@@ -14,11 +14,10 @@ Featuring:
 * mouse support
 * clipboard support
 
+With more planned such as syntax highlighting, user configurations, search & replace, persistent undo, etc.
+
 Here's what it looks like editing its own source code:
 
-<span align="center">
-  <img src="img/screenshot.png" alt="Smith in action" width="285" height="176"/>
-</span>
-
-
-With more planned such as syntax highlighting, user configurations, search & replace, persistent undo, etc.
+<h2 align="center">
+  <img  src="img/screenshot.png" alt="Smith in action" width="641" height="396"/>
+</h2>
