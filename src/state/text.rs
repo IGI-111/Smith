@@ -167,14 +167,6 @@ impl Editable for Text {
         self.pos - self.text.line_index_to_char_index(self.line())
     }
 
-    fn visual_col(&self, tab_length: usize) -> usize {
-        let line_start = self.text.line_index_to_char_index(self.line());
-        let col = self.pos - line_start;
-        let tab_count =
-            self.iter().skip(line_start).take(col).filter(|&c| c == '\t').count();
-        col + tab_count * (tab_length - 1)
-    }
-
     fn line_count(&self) -> usize {
         self.text.line_ending_count()
     }
@@ -185,5 +177,13 @@ impl Editable for Text {
 
     fn iter(&self) -> CharIter {
         self.text.char_iter()
+    }
+
+    fn iter_line(&self, line: usize) -> Option<CharIter> {
+        if let Some(line_slice) = self.text.line_iter().nth(line){
+            Some(line_slice.char_iter())
+        } else {
+            None
+        }
     }
 }

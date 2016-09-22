@@ -82,10 +82,22 @@ impl View {
     pub fn translate_coordinates<T>(&self, content: &T, x: u16, y: u16) -> (usize, usize)
         where T: Editable
     {
-        let line = y as isize + self.line_offset as isize - 1;
-        let col = cmp::max(0,
-                           x as isize - self.line_number_width(content.line_count()) as isize - 2);
-        (line as usize, col as usize)
+        let line = cmp::min((y as isize + self.line_offset as isize - 1) as usize,
+                            content.line_count() - 1);
+        let visual_col = (cmp::max(0,
+                                   x as isize -
+                                   self.line_number_width(content.line_count()) as isize -
+                                   2)) as usize;
+        // find out if we clicked through a tab
+        let col = content.iter_line(line)
+            .unwrap()
+            .scan(0, |state, x| {
+                *state = *state + if x == '\t' { TAB_LENGTH } else { 1 };
+                Some(*state)
+            })
+            .take_while(|&x| x <= visual_col)
+            .count();
+        (line, col)
     }
 
     fn paint_message(&mut self) -> Result<()> {
@@ -176,7 +188,7 @@ impl View {
                     }
                     Some(*state)
                 })
-                .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
+            .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
                 .take_while(|&(_, _, lines)| lines <= 1 + line_offset + lines_height);
 
         {
@@ -235,7 +247,12 @@ impl View {
         let first_line = self.line_offset;
         let y = line - first_line as usize;
         // we can't trust the actual column because tabs have variable length
-        let column = content.visual_col(TAB_LENGTH);
+        let visual_col = content.col();
+        let column = content.iter_line(line)
+            .unwrap()
+            .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
+            .take(visual_col)
+            .fold(0, |acc, x| acc + x);
         ((self.line_number_width(content.line_count()) as usize + 1 + column), y)
     }
 
