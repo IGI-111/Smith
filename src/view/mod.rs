@@ -92,7 +92,7 @@ impl View {
         let col = content.iter_line(line)
             .unwrap()
             .scan(0, |state, x| {
-                *state = *state + if x == '\t' { TAB_LENGTH } else { 1 };
+                *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
             })
             .take_while(|&x| x <= visual_col)
