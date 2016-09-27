@@ -78,8 +78,8 @@ pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, sta
             content.move_at(line, col);
             if let State::Select(origin) = *state {
                 if origin != content.pos() {
-                    let sel = (cmp::min(origin, content.pos() - 1),
-                               cmp::max(origin, content.pos() - 1));
+                    let sel = (cmp::min(origin, content.pos()),
+                               cmp::max(origin, content.pos()));
                     content.set_sel(sel);
                     *state = State::Selected;
                 } else {
