@@ -9,7 +9,7 @@ pub trait Selectable {
     fn reset_sel(&mut self);
     fn in_sel(&self, pos: usize) -> bool {
         match *self.sel() {
-            Some((beg, end)) => pos > beg && pos <= end + 1,
+            Some((beg, end)) => pos >= beg && pos <= end,
             None => false,
         }
     }
@@ -65,7 +65,8 @@ impl<T> Editable for Select<T>
             line_count() -> usize,
             len() -> usize,
             iter() -> CharIter,
-            iter_line(line: usize) -> Option<CharIter>,
+            iter_line(line: usize) -> CharIter,
+            line_index_to_char_index(line: usize) -> usize,
     }
 }
 

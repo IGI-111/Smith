@@ -179,11 +179,11 @@ impl Editable for Text {
         self.text.char_iter()
     }
 
-    fn iter_line(&self, line: usize) -> Option<CharIter> {
-        if let Some(line_slice) = self.text.line_iter().nth(line){
-            Some(line_slice.char_iter())
-        } else {
-            None
-        }
+    fn iter_line(&self, line: usize) -> CharIter {
+        self.text.line_iter_at_index(line).next().unwrap().char_iter()
+    }
+
+    fn line_index_to_char_index(&self, line: usize) -> usize {
+        self.text.line_index_to_char_index(line)
     }
 }

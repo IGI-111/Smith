@@ -125,7 +125,8 @@ impl<T> Editable for Recorded<T>
             line_count() -> usize,
             len() -> usize,
             iter() -> CharIter,
-            iter_line(line: usize) -> Option<CharIter>,
+            iter_line(line: usize) -> CharIter,
+            line_index_to_char_index(line: usize) -> usize,
     }
 }
 

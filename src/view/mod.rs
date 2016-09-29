@@ -90,7 +90,6 @@ impl View {
                                    2)) as usize;
         // find out if we clicked through a tab
         let col = content.iter_line(line)
-            .unwrap()
             .scan(0, |state, x| {
                 *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
@@ -170,71 +169,50 @@ impl View {
     fn paint_lines<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Selectable
     {
-        let line_offset = self.line_offset;
-        let lines_height = self.lines_height();
-        let lines_width = self.lines_width(content.line_count());
+        let line_offset = self.line_offset as usize;
+        let lines_height = self.lines_height() as usize;
+        let lines_width = self.lines_width(content.line_count()) as usize;
         let line_count = content.line_count();
 
-        let window_it = content.iter()
-                .take(content.len() - 1) // the last endline should be invisible to the user
-                .scan(('\n', 0, 1), |state, k| {
-                    {
-                        let (ref mut c, ref mut chars, ref mut lines) = *state;
-                        if *c == '\n' {
-                            *lines += 1;
-                        }
-                        *chars += 1;
-                        *c = k;
-                    }
-                    Some(*state)
-                })
-            .skip_while(|&(_, _, lines)| lines <= 1 + line_offset)
-                .take_while(|&(_, _, lines)| lines <= 1 + line_offset + lines_height);
+        let line_start = self.line_number_width(line_count) + 1;
 
-        {
-            let line_start = self.line_number_width(line_count) as u16 + 1;
+        let mut chars = content.line_index_to_char_index(line_offset);
+        for y in 0..cmp::min(lines_height, line_count - line_offset) {
+            let line = y + line_offset;
             try!(write!(self.stdout,
                         "{}{}{}{}{}",
                         color::Fg(color::White),
-                        cursor::Goto(1, 1),
-                        line_offset + 1,
+                        cursor::Goto(1, 1 + y as u16),
+                        1 + line,
                         style::Reset,
-                        cursor::Goto(1 + line_start, 1)));
-        }
-        let mut y = 1;
-        let mut line_len = 0;
-        for (c, chars, lines) in window_it {
-            if c == '\n' {
-                if line_len == 0 && content.in_sel(chars) {
-                    try!(write!(self.stdout, "{} {}", style::Invert, style::Reset));
-                }
-                line_len = 0;
-                let line_start = self.line_number_width(line_count) as u16 + 1;
-                try!(write!(self.stdout,
-                            "{}{}{}{}{}",
-                            color::Fg(color::White),
-                            cursor::Goto(1, 1 + y),
-                            lines,
-                            style::Reset,
-                            cursor::Goto(1 + line_start, 1 + y)));
-                y += 1;
-            } else if line_len > lines_width - 1 {
-                // don't print the character
-                line_len += 1;
-            } else {
-                if content.in_sel(chars) {
-                    try!(write!(self.stdout, "{}", style::Invert));
-                }
-                if c == '\t' {
-                    // FIXME: we should probably use gotos instead of relying on character length
-                    try!(write!(self.stdout,
-                                "{}",
-                                iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
+                        cursor::Goto(1 + line_start, 1 + y as u16)));
+
+            let mut line_len: usize = 0;
+            for c in content.iter_line(line).take_while(|&x| x != '\n') {
+                if line_len > lines_width - 1 {
+                    // do nothing but count
+                    chars += 1;
+                    line_len += 1;
                 } else {
-                    try!(write!(self.stdout, "{}", c));
+                    if content.in_sel(chars) {
+                        try!(write!(self.stdout, "{}", style::Invert));
+                    }
+                    if c == '\t' {
+                        try!(write!(self.stdout,
+                                    "{}",
+                                    iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
+                        line_len += TAB_LENGTH;
+                    } else {
+                        try!(write!(self.stdout, "{}", c));
+                        line_len += 1;
+                    }
+                    try!(write!(self.stdout, "{}", style::Reset));
+                    chars += 1;
                 }
-                try!(write!(self.stdout, "{}", style::Reset));
-                line_len += 1;
+            }
+            chars += 1;
+            if line_len <= 1 && content.in_sel(chars) {
+                try!(write!(self.stdout, "{} {}", style::Invert, style::Reset));
             }
         }
         Ok(())
@@ -249,7 +227,6 @@ impl View {
         // we can't trust the actual column because tabs have variable length
         let visual_col = content.col();
         let column = content.iter_line(line)
-            .unwrap()
             .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
             .take(visual_col)
             .fold(0, |acc, x| acc + x);
@@ -257,9 +234,7 @@ impl View {
     }
 
     fn line_number_width(&self, line_count: usize) -> u16 {
-        let max_in_window = self.line_offset + self.lines_height() + 2;
-        let max = cmp::min(max_in_window, line_count as u16);
-        max.to_string().len() as u16
+        line_count.to_string().len() as u16
     }
 
     fn status_height(&self) -> u16 {

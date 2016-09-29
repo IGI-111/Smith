@@ -22,7 +22,8 @@ pub trait Editable {
     fn line_count(&self) -> usize;
     fn len(&self) -> usize;
     fn iter(&self) -> CharIter;
-    fn iter_line(&self, line: usize) -> Option<CharIter>;
+    fn iter_line(&self, line: usize) -> CharIter;
+    fn line_index_to_char_index(&self, line: usize) -> usize;
 }
 
 pub type CharIter<'a> = RopeCharIter<'a>;
