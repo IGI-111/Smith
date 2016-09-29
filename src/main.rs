@@ -53,7 +53,7 @@ fn build_text(filename: Option<String>) -> Select<Recorded<Text>> {
         Some(name) => {
             match Text::open_file(name) {
                 Ok(v) => v,
-                Err(e) => panic!(e.to_string()),
+                Err(e) => panic!("{}", e),
             }
         }
         None => Text::empty(),
