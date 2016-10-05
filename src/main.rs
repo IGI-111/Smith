@@ -43,8 +43,8 @@ fn edit_file(filename: Option<String>) {
             if command.treat_event(&mut text, &mut view, event.unwrap()) {
                 break;
             }
-            view.render(&text).unwrap();
         }
+        view.render(&text).unwrap();
     }
 }
 

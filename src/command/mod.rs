@@ -77,8 +77,12 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, sta
         Event::Mouse(MouseEvent::Press(MouseButton::WheelUp, _, _)) => {
             view.scroll_view(-(SCROLL_FACTOR as isize), content);
         }
-        Event::Key(Key::Ctrl('z')) => content.undo(),
-        Event::Key(Key::Ctrl('y')) => content.redo(),
+        Event::Key(Key::Ctrl('z')) => {
+            content.undo();
+        }
+        Event::Key(Key::Ctrl('y')) => {
+            content.redo();
+        }
         Event::Key(Key::Ctrl('v')) => {
             let ctx = ClipboardContext::new().unwrap();
             for c in ctx.get_contents().unwrap().chars() {

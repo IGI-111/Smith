@@ -1,6 +1,6 @@
 use state::{Selectable, Editable, Named};
 use std::cmp;
-use std::io::{stdout, Stdout, Write, Result};
+use std::io::{stdout, Stdout, BufWriter, Write, Result};
 use std::iter;
 use termion::terminal_size;
 use termion::input::MouseTerminal;
@@ -8,7 +8,7 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor, color};
 
 pub struct View {
-    stdout: MouseTerminal<RawTerminal<Stdout>>,
+    stdout: BufWriter<MouseTerminal<RawTerminal<Stdout>>>,
     message: Option<String>,
     is_prompt: bool,
     line_offset: u16,
@@ -18,7 +18,7 @@ const TAB_LENGTH: usize = 4;
 
 impl View {
     pub fn new() -> Result<View> {
-        let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
+        let mut stdout = BufWriter::new(MouseTerminal::from(stdout().into_raw_mode().unwrap()));
         try!(write!(stdout, "{}{}", clear::All, cursor::Show));
         Ok(View {
             stdout: stdout,
