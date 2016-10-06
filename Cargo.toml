@@ -1,6 +1,6 @@
 [package]
 name = "smith"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["IGI-111 <igi.222@gmail.com>"]
 description = "Smith is a simple terminal-based text editor written in Rust."
 repository = "https://github.com/IGI-111/Smith"
@@ -8,6 +8,6 @@ keywords = [ "text", "editor", "terminal", "termion" ]
 license = "MIT"
 
 [dependencies]
-clipboard = "0.1.2"
-ropey = "0.3.0"
-termion = "1.0.8"
+clipboard = "0.1"
+ropey = "0.3"
+termion = "1.0"
