@@ -130,6 +130,9 @@ impl Editable for Text {
         self.text.insert_text_at_char_index(&format!("{}", c), self.pos);
         self.pos += 1;
     }
+    fn insert_forward(&mut self, c: char) {
+        self.text.insert_text_at_char_index(&format!("{}", c), self.pos);
+    }
 
     fn delete(&mut self) -> Option<char> {
         if self.pos == 0 {
@@ -139,6 +142,16 @@ impl Editable for Text {
             let ch = self.text.char_at_index(self.pos);
             self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
             Some(ch)
+        }
+    }
+
+    fn delete_forward(&mut self) -> Option<char> {
+        if self.pos < self.len()-1 {
+            let ch = self.text.char_at_index(self.pos);
+            self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
+            Some(ch)
+        } else {
+            None
         }
     }
 

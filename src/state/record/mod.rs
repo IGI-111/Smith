@@ -107,12 +107,29 @@ impl<T> Editable for Recorded<T>
         self.content.insert(c);
     }
 
+    fn insert_forward(&mut self, c: char) {
+        let mut s = String::new();
+        s.push(c);
+        self.record(Action::InsertForward(s));
+        self.content.insert_forward(c);
+    }
+
     fn delete(&mut self) -> Option<char> {
         let c = self.content.delete();
         if let Some(c) = c {
             let mut s = String::new();
             s.push(c);
             self.record(Action::Delete(s))
+        }
+        c
+    }
+
+    fn delete_forward(&mut self) -> Option<char> {
+        let c = self.content.delete_forward();
+        if let Some(c) = c {
+            let mut s = String::new();
+            s.push(c);
+            self.record(Action::DeleteForward(s))
         }
         c
     }

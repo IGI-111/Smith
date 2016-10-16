@@ -15,7 +15,9 @@ pub trait Editable {
     fn move_to(&mut self, pos: usize);
     fn move_at(&mut self, line: usize, col: usize);
     fn insert(&mut self, c: char);
+    fn insert_forward(&mut self, c: char);
     fn delete(&mut self) -> Option<char>;
+    fn delete_forward(&mut self) -> Option<char>;
     fn pos(&self) -> usize;
     fn line(&self) -> usize;
     fn col(&self) -> usize;

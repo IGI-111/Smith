@@ -115,8 +115,12 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, sta
         }
         Event::Key(Key::Home) => content.step(Movement::LineStart),
         Event::Key(Key::End) => content.step(Movement::LineEnd),
-        Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
+        Event::Key(Key::Backspace)  => {
             content.delete();
+            view.adjust_view(content.line());
+        }
+        Event::Key(Key::Delete) => {
+            content.delete_forward();
             view.adjust_view(content.line());
         }
         Event::Key(Key::Char(c)) => {
