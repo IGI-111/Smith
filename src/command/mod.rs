@@ -57,7 +57,8 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, sta
     where T: Editable + Named + Undoable
 {
     match event {
-        Event::Key(Key::Ctrl('q')) => {
+        Event::Key(Key::Ctrl('q')) |
+        Event::Key(Key::Esc) => {
             *state = State::Exit;
         }
         Event::Key(Key::Ctrl('s')) => {
@@ -115,7 +116,7 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event, sta
         }
         Event::Key(Key::Home) => content.step(Movement::LineStart),
         Event::Key(Key::End) => content.step(Movement::LineEnd),
-        Event::Key(Key::Backspace)  => {
+        Event::Key(Key::Backspace) => {
             content.delete();
             view.adjust_view(content.line());
         }
@@ -161,7 +162,8 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, event: Event, state: 
                 panic!("Treating prompt event when event is not a Prompt");
             }
         }
-        Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
+        Event::Key(Key::Backspace) |
+        Event::Key(Key::Delete) => {
             if let State::Prompt(ref prompt, ref mut message) = *state {
                 message.pop();
                 view.prompt(prompt, message);
@@ -171,6 +173,10 @@ fn treat_prompt_event<T>(content: &mut T, view: &mut View, event: Event, state: 
         }
         Event::Key(Key::Ctrl('q')) => {
             *state = State::Exit;
+        }
+        Event::Key(Key::Esc) => {
+            view.quiet();
+            *state = State::Insert;
         }
         _ => {}
     }

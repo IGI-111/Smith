@@ -10,7 +10,7 @@ Smith is a simple terminal-based text editor written in Rust.
 
 * line numbers
 * undo/redo
-* standard keybindings (Ctrl-S, Ctrl-Z, Ctrl-C...)
+* standard keybindings (Ctrl-S, Ctrl-Z, Ctrl-C, Esc...)
 * mouse support
 * clipboard support
 
