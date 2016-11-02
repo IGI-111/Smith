@@ -16,10 +16,16 @@ pub struct View {
 
 const TAB_LENGTH: usize = 4;
 
+    impl Drop for View {
+    fn drop(&mut self) {
+        write!(self.stdout, "\x1B[r\x1B[?1049l").unwrap();
+    }
+}
+
 impl View {
     pub fn new() -> Result<View> {
         let mut stdout = BufWriter::new(MouseTerminal::from(stdout().into_raw_mode().unwrap()));
-        try!(write!(stdout, "{}{}", clear::All, cursor::Show));
+        try!(write!(stdout, "\x1B[?1049h"));
         Ok(View {
             stdout: stdout,
             message: None,
