@@ -16,7 +16,7 @@ pub struct View {
 
 const TAB_LENGTH: usize = 4;
 
-    impl Drop for View {
+impl Drop for View {
     fn drop(&mut self) {
         write!(self.stdout, "\x1B[r\x1B[?1049l").unwrap();
     }
@@ -25,7 +25,7 @@ const TAB_LENGTH: usize = 4;
 impl View {
     pub fn new() -> Result<View> {
         let mut stdout = BufWriter::new(MouseTerminal::from(stdout().into_raw_mode().unwrap()));
-        try!(write!(stdout, "\x1B[?1049h"));
+        write!(stdout, "\x1B[?1049h")?;
         Ok(View {
             stdout: stdout,
             message: None,
@@ -67,21 +67,21 @@ impl View {
     }
 
     pub fn scroll_view<T: Editable>(&mut self, offset: isize, content: &T) {
-        self.line_offset =
-            cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
-                     (content.line_count() as isize) - 1) as u16;
+        self.line_offset = cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
+                                    (content.line_count() as isize) - 1) as
+                           u16;
 
     }
 
     pub fn render<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named + Selectable
     {
-        try!(write!(self.stdout, "{}", clear::All));
-        try!(self.paint_lines(content));
-        try!(self.paint_status(content));
-        try!(self.paint_message());
-        try!(self.paint_cursor(content));
-        try!(self.stdout.flush());
+        write!(self.stdout, "{}", clear::All)?;
+        self.paint_lines(content)?;
+        self.paint_status(content)?;
+        self.paint_message()?;
+        self.paint_cursor(content)?;
+        self.stdout.flush()?;
         Ok(())
     }
 
@@ -108,8 +108,8 @@ impl View {
     fn paint_message(&mut self) -> Result<()> {
         if let Some(ref message) = self.message {
             let y = self.lines_height() + 1;
-            try!(write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message));
-            try!(self.stdout.flush());
+            write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
+            self.stdout.flush()?;
         }
         Ok(())
     }
@@ -123,7 +123,7 @@ impl View {
            content.line() as u16 >= self.line_offset + self.lines_height() ||
            content.col() as u16 >= self.lines_width(content.line_count()) ||
            content.sel().is_some() {
-            try!(write!(self.stdout, "{}", cursor::Hide));
+            write!(self.stdout, "{}", cursor::Hide)?;
             return Ok(());
         }
 
@@ -201,7 +201,7 @@ impl View {
                     line_len += 1;
                 } else {
                     if content.in_sel(chars) {
-                        try!(write!(self.stdout, "{}", style::Invert));
+                        write!(self.stdout, "{}", style::Invert)?;
                     }
                     if c == '\t' {
                         try!(write!(self.stdout,
@@ -209,16 +209,16 @@ impl View {
                                     iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
                         line_len += TAB_LENGTH;
                     } else {
-                        try!(write!(self.stdout, "{}", c));
+                        write!(self.stdout, "{}", c)?;
                         line_len += 1;
                     }
-                    try!(write!(self.stdout, "{}", style::Reset));
+                    write!(self.stdout, "{}", style::Reset)?;
                     chars += 1;
                 }
             }
             chars += 1;
             if line_len <= 1 && content.in_sel(chars) {
-                try!(write!(self.stdout, "{} {}", style::Invert, style::Reset));
+                write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
             }
         }
         Ok(())

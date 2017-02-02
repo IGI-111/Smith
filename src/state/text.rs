@@ -23,10 +23,10 @@ impl Text {
     }
     pub fn open_file(filename: String) -> Result<Text> {
         if Path::new(&filename).exists() {
-            let mut file = try!(File::open(&filename));
+            let mut file = File::open(&filename)?;
 
             let mut buf = String::new();
-            try!(file.read_to_string(&mut buf));
+            file.read_to_string(&mut buf)?;
             if buf.is_empty() {
                 buf = "\n".to_owned();
             }
@@ -50,11 +50,11 @@ impl Saveable for Text {
         if self.name.is_empty() {
             return Err(Error::new(ErrorKind::InvalidInput, "Can't write file with no name"));
         }
-        let mut file = try!(File::create(&self.name));
+        let mut file = File::create(&self.name)?;
         for c in self.text.char_iter() {
-            try!(write!(file, "{}", c));
+            write!(file, "{}", c)?;
         }
-        try!(file.sync_all());
+        file.sync_all()?;
         Ok(())
     }
 }
