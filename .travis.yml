@@ -1,9 +1,13 @@
 language: rust
 cache: cargo
 rust:
-    - stable
-    - beta
-    - nightly
+  - stable
+  - beta
+  - nightly
+
+before_install:
+  - sudo apt-get install -qq xorg-dev
+
 script:
-    - cargo build --verbose
-    - cargo build --release --verbose
+  - cargo build --verbose
+  - cargo build --release --verbose
