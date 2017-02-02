@@ -3,6 +3,8 @@
   <img src="img/smith.png" alt="Smith" width="378" height="175"/>
   </a>
 </h1>
+![](https://img.shields.io/crates/v/smith.svg)
+![](https://travis-ci.org/IGI-111/Smith.svg)
 
 Smith is a simple terminal-based text editor written in Rust.
 
