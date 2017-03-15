@@ -9,6 +9,14 @@
 
 Smith is a simple terminal-based text editor written in Rust.
 
+## Install
+
+Using Cargo:
+```
+cargo install smith
+```
+
+
 ## Features
 
 * line numbers
