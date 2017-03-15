@@ -3,17 +3,10 @@
   <img src="img/smith.png" alt="Smith" width="378" height="175"/>
   </a>
 </h1>
-[![Build Status](https://img.shields.io/crates/v/smith.svg)](https://crates.io/crates/smith)
-[![Build Status](https://travis-ci.org/IGI-111/Smith.svg?branch=master)](https://travis-ci.org/IGI-111/Smith)
+![Build Status](https://img.shields.io/crates/v/smith.svg)](https://crates.io/crates/smith)
+![Build Status](https://travis-ci.org/IGI-111/Smith.svg?branch=master)](https://travis-ci.org/IGI-111/Smith)
 
 Smith is a simple terminal-based text editor written in Rust.
-
-## Install
-
-Using Cargo:
-```
-cargo install smith
-```
 
 ## Features
 
