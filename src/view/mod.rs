@@ -4,11 +4,12 @@ use std::io::{stdout, Stdout, BufWriter, Write, Result};
 use std::iter;
 use termion::terminal_size;
 use termion::input::MouseTerminal;
+use termion::screen::AlternateScreen;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor, color};
 
 pub struct View {
-    stdout: BufWriter<MouseTerminal<RawTerminal<Stdout>>>,
+    stdout: BufWriter<MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>>,
     message: Option<String>,
     is_prompt: bool,
     line_offset: u16,
@@ -16,22 +17,18 @@ pub struct View {
 
 const TAB_LENGTH: usize = 4;
 
-impl Drop for View {
-    fn drop(&mut self) {
-        write!(self.stdout, "\x1B[r\x1B[?1049l").unwrap();
-    }
-}
-
 impl View {
     pub fn new() -> Result<View> {
-        let mut stdout = BufWriter::new(MouseTerminal::from(stdout().into_raw_mode().unwrap()));
-        write!(stdout, "\x1B[?1049h")?;
+        let stdout =
+            BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
+                                                                         .into_raw_mode()
+                                                                         .unwrap())));
         Ok(View {
-            stdout: stdout,
-            message: None,
-            is_prompt: false,
-            line_offset: 0,
-        })
+               stdout,
+               message: None,
+               is_prompt: false,
+               line_offset: 0,
+           })
     }
 
     pub fn message(&mut self, message: &str) {
@@ -70,7 +67,6 @@ impl View {
         self.line_offset = cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
                                     (content.line_count() as isize) - 1) as
                            u16;
-
     }
 
     pub fn render<T>(&mut self, content: &T) -> Result<()>
@@ -129,7 +125,12 @@ impl View {
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message.clone().unwrap().chars().count() as u16, self.lines_height() + 1)
+            (self.message
+                 .clone()
+                 .unwrap()
+                 .chars()
+                 .count() as u16,
+             self.lines_height() + 1)
         } else {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
