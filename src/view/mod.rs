@@ -19,12 +19,10 @@ const TAB_LENGTH: usize = 4;
 
 impl View {
     pub fn new() -> Result<View> {
-        let stdout =
-            BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
-                                                                         .into_raw_mode()
-                                                                         .unwrap())));
         Ok(View {
-               stdout,
+            stdout: BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
+                                                                         .into_raw_mode()
+                                                                         .unwrap()))),
                message: None,
                is_prompt: false,
                line_offset: 0,
