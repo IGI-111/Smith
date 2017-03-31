@@ -27,8 +27,10 @@ impl Text {
 
             let mut buf = String::new();
             file.read_to_string(&mut buf)?;
-            if buf.is_empty() {
-                buf = "\n".to_owned();
+
+            match buf.chars().last() {
+                Some('\n') => {}
+                _ => buf.push('\n'),
             }
             let text = Rope::from_string(buf);
 
