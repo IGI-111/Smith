@@ -215,10 +215,10 @@ impl View {
                     chars += 1;
                 }
             }
-            chars += 1;
             if line_len <= 1 && content.in_sel(chars) {
                 write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
             }
+            chars += 1;
         }
         Ok(())
     }

@@ -44,7 +44,7 @@ impl Command {
             true
         } else {
             false
-        };
+        }
     }
 }
 
