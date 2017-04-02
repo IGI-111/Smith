@@ -50,12 +50,12 @@ fn edit_file(filename: Option<String>) {
 
 fn build_text(filename: Option<String>) -> Select<Recorded<Text>> {
     Select::new(Recorded::new(match filename {
-        Some(name) => {
-            match Text::open_file(name) {
-                Ok(v) => v,
-                Err(e) => panic!("{}", e),
-            }
-        }
-        None => Text::empty(),
-    }))
+                                  Some(name) => {
+                                      match Text::open_file(name) {
+                                          Ok(v) => v,
+                                          Err(e) => panic!("{}", e),
+                                      }
+                                  }
+                                  None => Text::empty(),
+                              }))
 }
