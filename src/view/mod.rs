@@ -133,10 +133,10 @@ impl View {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
         };
-        try!(write!(self.stdout,
-                    "{}{}",
-                    cursor::Show,
-                    cursor::Goto(1 + x, 1 + y)));
+        write!(self.stdout,
+               "{}{}",
+               cursor::Show,
+               cursor::Goto(1 + x, 1 + y))?;
         Ok(())
     }
 
@@ -152,22 +152,22 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        try!(write!(self.stdout,
-                    "{}{}{}{}{}{}",
-                    color::Fg(color::White),
-                    style::Invert,
-                    cursor::Goto(1, 1 + y),
-                    empty_line,
-                    cursor::Goto(1, 1 + y),
-                    content.name()));
+        write!(self.stdout,
+               "{}{}{}{}{}{}",
+               color::Fg(color::White),
+               style::Invert,
+               cursor::Goto(1, 1 + y),
+               empty_line,
+               cursor::Goto(1, 1 + y),
+               content.name())?;
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        try!(write!(self.stdout,
-                    "{}{}{}",
-                    cursor::Goto(1 + x, 1 + y),
-                    position_info,
-                    style::Reset));
+        write!(self.stdout,
+               "{}{}{}",
+               cursor::Goto(1 + x, 1 + y),
+               position_info,
+               style::Reset)?;
         Ok(())
     }
 
@@ -184,13 +184,13 @@ impl View {
         let mut chars = content.line_index_to_char_index(line_offset);
         for y in 0..cmp::min(lines_height, line_count - line_offset) {
             let line = y + line_offset;
-            try!(write!(self.stdout,
-                        "{}{}{}{}{}",
-                        color::Fg(color::White),
-                        cursor::Goto(1, 1 + y as u16),
-                        1 + line,
-                        style::Reset,
-                        cursor::Goto(1 + line_start, 1 + y as u16)));
+            write!(self.stdout,
+                   "{}{}{}{}{}",
+                   color::Fg(color::White),
+                   cursor::Goto(1, 1 + y as u16),
+                   1 + line,
+                   style::Reset,
+                   cursor::Goto(1 + line_start, 1 + y as u16))?;
 
             let mut line_len: usize = 0;
             for c in content.iter_line(line).take_while(|&x| x != '\n') {
@@ -203,9 +203,9 @@ impl View {
                         write!(self.stdout, "{}", style::Invert)?;
                     }
                     if c == '\t' {
-                        try!(write!(self.stdout,
-                                    "{}",
-                                    iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
+                        write!(self.stdout,
+                               "{}",
+                               iter::repeat(" ").take(TAB_LENGTH).collect::<String>())?;
                         line_len += TAB_LENGTH;
                     } else {
                         write!(self.stdout, "{}", c)?;
