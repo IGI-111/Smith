@@ -1,4 +1,4 @@
-use super::{Movement, Editable, Saveable, Named, Undoable, CharIter};
+use super::{Movement, Editable, Saveable, Named, Undoable, CharIter, LineIter};
 use std::io::Result;
 
 pub type Selection = (usize, usize);
@@ -13,6 +13,7 @@ pub trait Selectable {
             None => false,
         }
     }
+    fn line_in_sel(&self, line: usize) -> bool;
 }
 
 pub struct Select<T>
@@ -47,6 +48,10 @@ impl<T> Selectable for Select<T>
     fn reset_sel(&mut self) {
         self.sel = None;
     }
+
+    fn line_in_sel(&self, line: usize) -> bool {
+        self.in_sel(self.line_index_to_char_index(line))
+    }
 }
 
 impl<T> Editable for Select<T>
@@ -67,6 +72,7 @@ impl<T> Editable for Select<T>
             line_count() -> usize,
             len() -> usize,
             iter() -> CharIter,
+            lines() -> LineIter,
             iter_line(line: usize) -> CharIter,
             line_index_to_char_index(line: usize) -> usize,
     }

@@ -4,7 +4,7 @@ use std::fs::File;
 use std::cmp;
 use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
-use super::{Movement, Editable, Named, Saveable, CharIter};
+use super::{Movement, Editable, Named, Saveable, CharIter, LineIter};
 
 #[derive(Debug)]
 pub struct Text {
@@ -206,6 +206,10 @@ impl Editable for Text {
 
     fn iter(&self) -> CharIter {
         self.text.char_iter()
+    }
+
+    fn lines(&self) -> LineIter {
+        self.text.line_iter()
     }
 
     fn iter_line(&self, line: usize) -> CharIter {
