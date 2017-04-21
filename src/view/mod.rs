@@ -9,7 +9,6 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor, color};
 
 pub struct View {
-    stdout: BufWriter<MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>>,
     message: Option<String>,
     is_prompt: bool,
     line_offset: u16,
@@ -21,12 +20,12 @@ impl View {
     pub fn new() -> Result<View> {
         Ok(View {
             stdout: BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
-                                                                         .into_raw_mode()
-                                                                         .unwrap()))),
-               message: None,
-               is_prompt: false,
-               line_offset: 0,
-           })
+                                                                             .into_raw_mode()
+                                                                             .unwrap()))),
+                                                                             message: None,
+                                                                             is_prompt: false,
+                                                                             line_offset: 0,
+        })
     }
 
     pub fn message(&mut self, message: &str) {
@@ -63,162 +62,166 @@ impl View {
 
     pub fn scroll_view<T: Editable>(&mut self, offset: isize, content: &T) {
         self.line_offset = cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
-                                    (content.line_count() as isize) - 1) as
-                           u16;
+        (content.line_count() as isize) - 1) as
+            u16;
     }
 
-    pub fn render<T>(&mut self, content: &T) -> Result<()>
-        where T: Editable + Named + Selectable
-    {
-        write!(self.stdout, "{}", clear::All)?;
-        self.paint_lines(content)?;
-        self.paint_status(content)?;
-        self.paint_message()?;
-        self.paint_cursor(content)?;
-        self.stdout.flush()?;
-        Ok(())
-    }
+    pub fn render<T>(&self, content: &T, out: &mut W) -> Result<()>
+        where T: Editable + Named + Selectable, W: Write
+
+        {
+            self.paint_lines(content, out)?;
+            self.paint_status(content, out)?;
+            self.paint_message(out)?;
+            self.paint_cursor(content, out)?;
+            out.flush()?;
+            Ok(())
+        }
 
     pub fn translate_coordinates<T>(&self, content: &T, x: u16, y: u16) -> (usize, usize)
         where T: Editable
-    {
-        let line = cmp::min((y as isize + self.line_offset as isize - 1) as usize,
-                            content.line_count() - 1);
-        let visual_col = (cmp::max(0,
-                                   x as isize -
-                                   self.line_number_width(content.line_count()) as isize -
-                                   2)) as usize;
-        // find out if we clicked through a tab
-        let col = content.iter_line(line)
-            .scan(0, |state, x| {
-                *state += if x == '\t' { TAB_LENGTH } else { 1 };
-                Some(*state)
-            })
+        {
+            let line = cmp::min((y as isize + self.line_offset as isize - 1) as usize,
+            content.line_count() - 1);
+            let visual_col = (cmp::max(0,
+                                       x as isize -
+                                       self.line_number_width(content.line_count()) as isize -
+                                       2)) as usize;
+            // find out if we clicked through a tab
+            let col = content.iter_line(line)
+                .scan(0, |state, x| {
+                    *state += if x == '\t' { TAB_LENGTH } else { 1 };
+                    Some(*state)
+                })
             .take_while(|&x| x <= visual_col)
-            .count();
-        (line, col)
-    }
-
-    fn paint_message(&mut self) -> Result<()> {
-        if let Some(ref message) = self.message {
-            let y = self.lines_height() + 1;
-            write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
-            self.stdout.flush()?;
+                .count();
+            (line, col)
         }
-        Ok(())
-    }
 
-    fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
+    fn paint_message<W>(&self, &mut out: W) -> Result<()>
+        where W: Write
+        {
+            if let Some(ref message) = self.message {
+                let y = self.lines_height() + 1;
+                write!(out, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
+                out.flush()?;
+            }
+            Ok(())
+        }
+
+    fn paint_cursor<T, W>(&self, content: &T, &mut out: W) -> Result<()>
         where T: Editable + Selectable
-    {
-        // FIXME: don't print the cursor if off screen, though we should in the future for long
-        // lines
-        if (content.line() as u16) < self.line_offset ||
-           content.line() as u16 >= self.line_offset + self.lines_height() ||
-           content.col() as u16 >= self.lines_width(content.line_count()) ||
-           content.sel().is_some() {
-            write!(self.stdout, "{}", cursor::Hide)?;
-            return Ok(());
-        }
+        {
+            // FIXME: don't print the cursor if off screen, though we should in the future for long
+            // lines
+            if (content.line() as u16) < self.line_offset ||
+                content.line() as u16 >= self.line_offset + self.lines_height() ||
+                    content.col() as u16 >= self.lines_width(content.line_count()) ||
+                    content.sel().is_some() {
+                        write!(self.stdout, "{}", cursor::Hide)?;
+                        return Ok(());
+                    }
 
-        // in the case of a prompt, the cursor should be drawn in the message line
-        let (x, y) = if self.is_prompt {
-            (self.message
+            // in the case of a prompt, the cursor should be drawn in the message line
+            let (x, y) = if self.is_prompt {
+                (self.message
                  .clone()
                  .unwrap()
                  .chars()
                  .count() as u16,
-             self.lines_height() + 1)
-        } else {
-            let (a, b) = self.cursor_pos(content);
-            (a as u16, b as u16)
-        };
-        write!(self.stdout,
-               "{}{}",
-               cursor::Show,
-               cursor::Goto(1 + x, 1 + y))?;
-        Ok(())
-    }
+                 self.lines_height() + 1)
+            } else {
+                let (a, b) = self.cursor_pos(content);
+                (a as u16, b as u16)
+            };
+            write!(self.stdout,
+                   "{}{}",
+                   cursor::Show,
+                   cursor::Goto(1 + x, 1 + y))?;
+            Ok(())
+        }
 
     fn paint_status<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named
-    {
-        let line = content.line();
-        let column = content.col();
-        let line_count = content.line_count();
-        let advance = ((line + 1) as f64 / line_count as f64 * 100.0).floor();
+        {
+            let line = content.line();
+            let column = content.col();
+            let line_count = content.line_count();
+            let advance = ((line + 1) as f64 / line_count as f64 * 100.0).floor();
 
-        let (screen_width, _) = terminal_size().unwrap();
-        let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
-        let y = self.lines_height() as u16;
+            let (screen_width, _) = terminal_size().unwrap();
+            let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
+            let y = self.lines_height() as u16;
 
-        write!(self.stdout,
-               "{}{}{}{}{}{}",
-               color::Fg(color::White),
-               style::Invert,
-               cursor::Goto(1, 1 + y),
-               empty_line,
-               cursor::Goto(1, 1 + y),
-               content.name())?;
+            write!(self.stdout,
+                   "{}{}{}{}{}{}",
+                   color::Fg(color::White),
+                   style::Invert,
+                   cursor::Goto(1, 1 + y),
+                   empty_line,
+                   cursor::Goto(1, 1 + y),
+                   content.name())?;
 
-        let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
-        let x = screen_width - position_info.len() as u16;
-        write!(self.stdout,
-               "{}{}{}",
-               cursor::Goto(1 + x, 1 + y),
-               position_info,
-               style::Reset)?;
-        Ok(())
-    }
+            let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
+            let x = screen_width - position_info.len() as u16;
+            write!(self.stdout,
+                   "{}{}{}",
+                   cursor::Goto(1 + x, 1 + y),
+                   position_info,
+                   style::Reset)?;
+            Ok(())
+        }
 
     fn paint_lines<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Selectable
-    {
-        let line_offset = self.line_offset as usize;
-        let lines_height = self.lines_height() as usize;
-        let lines_width = self.lines_width(content.line_count()) as usize;
-        let line_count = content.line_count();
+        {
+            let line_offset = self.line_offset as usize;
+            let lines_height = self.lines_height() as usize;
+            let lines_width = self.lines_width(content.line_count()) as usize;
+            let line_count = content.line_count();
 
-        let line_start = self.line_number_width(line_count) + 1;
+            let line_start = self.line_number_width(line_count) + 1;
 
-        for (y, line) in content.lines()
+            for (y, line) in content.lines()
                 .skip(line_offset)
-                .take(cmp::min(lines_height, line_count))
-                .enumerate() {
-            // paint line number and initialize display for this line
-            let line_index = line_offset + y;
-            write!(self.stdout,
-                   "{}{}{}{}{}",
-                   color::Fg(color::White),
-                   cursor::Goto(1, 1 + y as u16),
-                   1 + line_index,
-                   style::Reset,
-                   cursor::Goto(1 + line_start, 1 + y as u16))?;
+                    .take(cmp::min(lines_height, line_count))
+                    .enumerate() {
+                        // paint line number and initialize display for this line
+                        let line_index = line_offset + y;
+                        write!(self.stdout,
+                               "{}{}{}{}{}{}",
+                               cursor::Goto(1, 1 + y as u16),
+                               clear::CurrentLine,
+                               color::Fg(color::White),
+                               1 + line_index,
+                               style::Reset,
+                               cursor::Goto(1 + line_start, 1 + y as u16))?;
 
-            if line.char_count() > 0 {
-                let line_start_char_index = content.line_index_to_char_index(line_index);
-                for (x, c) in line.char_iter()
-                        .flat_map(|c| if c == '\t' {
-                                      iter::repeat(' ').take(TAB_LENGTH)
-                                  } else {
-                                      iter::repeat(c).take(1)
-                                  })
-                        .enumerate() {
-                    if x < lines_width {
-                        let char_index = line_start_char_index + x;
-                        if content.in_sel(char_index) {
-                            write!(self.stdout, "{}{}{}", style::Invert, c, style::Reset)?;
-                        } else {
-                            write!(self.stdout, "{}", c)?;
+                        if line.char_count() > 0 {
+                            let line_start_char_index = content.line_index_to_char_index(line_index);
+                            for (x, c) in line.char_iter()
+                                .flat_map(|c| if c == '\t' {
+                                    iter::repeat(' ').take(TAB_LENGTH)
+                                } else {
+                                    iter::repeat(c).take(1)
+                                })
+                            .enumerate() {
+                                if x < lines_width {
+                                    let char_index = line_start_char_index + x;
+                                    if content.in_sel(char_index) {
+                                        write!(self.stdout, "{}{}{}", style::Invert, c, style::Reset)?;
+                                    } else {
+                                        write!(self.stdout, "{}", c)?;
+                                    }
+                                }
+                            }
+                        } else if content.line_in_sel(line_offset + y) {
+                            write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
                         }
                     }
-                }
-            } else if content.line_in_sel(line_offset + y) {
-                write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
-            }
+            write!(self.stdout, "{}", clear::AfterCursor)?;
+            Ok(())
         }
-        Ok(())
-    }
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
         // TODO: column offsetting for long lines
