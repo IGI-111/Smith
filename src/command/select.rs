@@ -5,24 +5,30 @@ use std::cmp;
 use clipboard::ClipboardContext;
 use super::{State, treat_insert_event};
 
-pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
+pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -> State
     where T: Selectable + Editable + Named + Undoable
 {
     match event {
         Event::Key(Key::Ctrl('c')) => {
             let (beg, end) = content.sel().unwrap();
 
-            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
+            let selection: String = content.iter()
+                .skip(beg)
+                .take(end - beg + 1)
+                .collect();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
             content.reset_sel();
-            *state = State::Insert;
+            State::Insert
         }
         Event::Key(Key::Ctrl('x')) => {
             let (beg, end) = content.sel().unwrap();
 
-            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
+            let selection: String = content.iter()
+                .skip(beg)
+                .take(end - beg + 1)
+                .collect();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
@@ -30,20 +36,24 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event, s
             view.adjust_view(content.line());
 
             content.reset_sel();
-            *state = State::Insert;
+            State::Insert
         }
         Event::Key(Key::Backspace) |
         Event::Key(Key::Delete) => {
             delete_sel(content);
             view.adjust_view(content.line());
             content.reset_sel();
-            *state = State::Insert;
+            State::Insert
+        }
+        Event::Key(Key::Char(_)) => {
+            delete_sel(content);
+            view.adjust_view(content.line());
+            content.reset_sel();
+            treat_insert_event(content, view, event)
         }
         _ => {
             content.reset_sel();
-            *state = State::Insert;
-
-            treat_insert_event(content, view, event, state)
+            treat_insert_event(content, view, event)
         }
     }
 }
@@ -60,36 +70,29 @@ fn delete_sel<T>(content: &mut T)
 }
 
 
-pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, state: &mut State)
+pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> State
     where T: Editable + Selectable
 {
     match event {
         Event::Mouse(MouseEvent::Hold(x, y)) => {
             let (line, col) = view.translate_coordinates(content, x, y);
             content.move_at(line, col);
-            if let State::Select(origin) = *state {
-                let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
-                content.set_sel(sel);
-            } else {
-                panic!("Treating select event when event is not a Select");
-            }
+            let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+            content.set_sel(sel);
+            State::Select(origin)
         }
         Event::Mouse(MouseEvent::Release(x, y)) => {
             let (line, col) = view.translate_coordinates(content, x, y);
             content.move_at(line, col);
-            if let State::Select(origin) = *state {
-                if origin != content.pos() {
-                    let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
-                    content.set_sel(sel);
-                    *state = State::Selected;
-                } else {
-                    *state = State::Insert;
-                }
+            if origin != content.pos() {
+                let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+                content.set_sel(sel);
+                State::Selected
             } else {
-                panic!("Treating select event when event is not a Select");
+                State::Insert
             }
 
         }
-        _ => {}
+        _ => State::Select(origin),
     }
 }

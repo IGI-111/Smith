@@ -4,7 +4,7 @@ use std::fs::File;
 use std::cmp;
 use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::path::Path;
-use super::{Movement, Editable, Named, Saveable, CharIter};
+use super::{Movement, Editable, Named, Saveable, CharIter, LineIter};
 
 #[derive(Debug)]
 pub struct Text {
@@ -27,16 +27,18 @@ impl Text {
 
             let mut buf = String::new();
             file.read_to_string(&mut buf)?;
-            if buf.is_empty() {
-                buf = "\n".to_owned();
+
+            match buf.chars().last() {
+                Some('\n') => {}
+                _ => buf.push('\n'),
             }
             let text = Rope::from_string(buf);
 
             Ok(Text {
-                pos: 0,
-                text: text,
-                name: filename,
-            })
+                   pos: 0,
+                   text: text,
+                   name: filename,
+               })
         } else {
             let mut text = Text::empty();
             text.set_name(filename);
@@ -74,16 +76,22 @@ impl Editable for Text {
             Movement::Up => {
                 if self.line() > 0 {
                     let prev_line = self.text.line_index_to_char_index(self.line() - 1);
-                    let prev_line_size =
-                        self.text.line_iter().nth(self.line() - 1).unwrap().char_count();
+                    let prev_line_size = self.text
+                        .line_iter()
+                        .nth(self.line() - 1)
+                        .unwrap()
+                        .char_count();
                     self.pos = prev_line + cmp::min(self.col(), prev_line_size - 1);
                 }
             }
             Movement::Down => {
                 if self.line() < self.line_count() - 1 {
                     let next_line = self.text.line_index_to_char_index(self.line() + 1);
-                    let next_line_size =
-                        self.text.line_iter().nth(self.line() + 1).unwrap().char_count();
+                    let next_line_size = self.text
+                        .line_iter()
+                        .nth(self.line() + 1)
+                        .unwrap()
+                        .char_count();
                     self.pos = next_line + cmp::min(self.col(), next_line_size - 1);
                 }
             }
@@ -120,7 +128,11 @@ impl Editable for Text {
             }
             Movement::LineEnd => {
                 let curr_line = self.text.line_index_to_char_index(self.line());
-                let curr_line_size = self.text.line_iter().nth(self.line()).unwrap().char_count();
+                let curr_line_size = self.text
+                    .line_iter()
+                    .nth(self.line())
+                    .unwrap()
+                    .char_count();
                 self.pos = curr_line + curr_line_size - 1;
             }
         }
@@ -146,7 +158,7 @@ impl Editable for Text {
     }
 
     fn delete_forward(&mut self) -> Option<char> {
-        if self.pos < self.len()-1 {
+        if self.pos < self.len() - 1 {
             let ch = self.text.char_at_index(self.pos);
             self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
             Some(ch)
@@ -164,7 +176,11 @@ impl Editable for Text {
     fn move_at(&mut self, line: usize, col: usize) {
         let line = cmp::min(line, self.line_count() - 1);
         let col = cmp::min(col,
-                           self.text.line_iter().nth(line).unwrap().char_count() - 1);
+                           self.text
+                               .line_iter()
+                               .nth(line)
+                               .unwrap()
+                               .char_count() - 1);
         self.pos = self.text.line_index_to_char_index(line) + col;
     }
 
@@ -192,8 +208,16 @@ impl Editable for Text {
         self.text.char_iter()
     }
 
+    fn lines(&self) -> LineIter {
+        self.text.line_iter()
+    }
+
     fn iter_line(&self, line: usize) -> CharIter {
-        self.text.line_iter_at_index(line).next().unwrap().char_iter()
+        self.text
+            .line_iter_at_index(line)
+            .next()
+            .unwrap()
+            .char_iter()
     }
 
     fn line_index_to_char_index(&self, line: usize) -> usize {

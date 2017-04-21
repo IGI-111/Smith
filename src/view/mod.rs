@@ -4,11 +4,12 @@ use std::io::{stdout, Stdout, BufWriter, Write, Result};
 use std::iter;
 use termion::terminal_size;
 use termion::input::MouseTerminal;
+use termion::screen::AlternateScreen;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor, color};
 
 pub struct View {
-    stdout: BufWriter<MouseTerminal<RawTerminal<Stdout>>>,
+    stdout: BufWriter<MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>>,
     message: Option<String>,
     is_prompt: bool,
     line_offset: u16,
@@ -16,22 +17,16 @@ pub struct View {
 
 const TAB_LENGTH: usize = 4;
 
-impl Drop for View {
-    fn drop(&mut self) {
-        write!(self.stdout, "\x1B[r\x1B[?1049l").unwrap();
-    }
-}
-
 impl View {
     pub fn new() -> Result<View> {
-        let mut stdout = BufWriter::new(MouseTerminal::from(stdout().into_raw_mode().unwrap()));
-        write!(stdout, "\x1B[?1049h")?;
         Ok(View {
-            stdout: stdout,
-            message: None,
-            is_prompt: false,
-            line_offset: 0,
-        })
+            stdout: BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
+                                                                         .into_raw_mode()
+                                                                         .unwrap()))),
+               message: None,
+               is_prompt: false,
+               line_offset: 0,
+           })
     }
 
     pub fn message(&mut self, message: &str) {
@@ -70,7 +65,6 @@ impl View {
         self.line_offset = cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
                                     (content.line_count() as isize) - 1) as
                            u16;
-
     }
 
     pub fn render<T>(&mut self, content: &T) -> Result<()>
@@ -129,15 +123,20 @@ impl View {
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message.clone().unwrap().chars().count() as u16, self.lines_height() + 1)
+            (self.message
+                 .clone()
+                 .unwrap()
+                 .chars()
+                 .count() as u16,
+             self.lines_height() + 1)
         } else {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
         };
-        try!(write!(self.stdout,
-                    "{}{}",
-                    cursor::Show,
-                    cursor::Goto(1 + x, 1 + y)));
+        write!(self.stdout,
+               "{}{}",
+               cursor::Show,
+               cursor::Goto(1 + x, 1 + y))?;
         Ok(())
     }
 
@@ -153,22 +152,22 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        try!(write!(self.stdout,
-                    "{}{}{}{}{}{}",
-                    color::Fg(color::White),
-                    style::Invert,
-                    cursor::Goto(1, 1 + y),
-                    empty_line,
-                    cursor::Goto(1, 1 + y),
-                    content.name()));
+        write!(self.stdout,
+               "{}{}{}{}{}{}",
+               color::Fg(color::White),
+               style::Invert,
+               cursor::Goto(1, 1 + y),
+               empty_line,
+               cursor::Goto(1, 1 + y),
+               content.name())?;
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        try!(write!(self.stdout,
-                    "{}{}{}",
-                    cursor::Goto(1 + x, 1 + y),
-                    position_info,
-                    style::Reset));
+        write!(self.stdout,
+               "{}{}{}",
+               cursor::Goto(1 + x, 1 + y),
+               position_info,
+               style::Reset)?;
         Ok(())
     }
 
@@ -182,48 +181,44 @@ impl View {
 
         let line_start = self.line_number_width(line_count) + 1;
 
-        let mut chars = content.line_index_to_char_index(line_offset);
-        for y in 0..cmp::min(lines_height, line_count - line_offset) {
-            let line = y + line_offset;
-            try!(write!(self.stdout,
-                        "{}{}{}{}{}",
-                        color::Fg(color::White),
-                        cursor::Goto(1, 1 + y as u16),
-                        1 + line,
-                        style::Reset,
-                        cursor::Goto(1 + line_start, 1 + y as u16)));
+        for (y, line) in content.lines()
+                .skip(line_offset)
+                .take(cmp::min(lines_height, line_count))
+                .enumerate() {
+            // paint line number and initialize display for this line
+            let line_index = line_offset + y;
+            write!(self.stdout,
+                   "{}{}{}{}{}",
+                   color::Fg(color::White),
+                   cursor::Goto(1, 1 + y as u16),
+                   1 + line_index,
+                   style::Reset,
+                   cursor::Goto(1 + line_start, 1 + y as u16))?;
 
-            let mut line_len: usize = 0;
-            for c in content.iter_line(line).take_while(|&x| x != '\n') {
-                if line_len > lines_width - 1 {
-                    // do nothing but count
-                    chars += 1;
-                    line_len += 1;
-                } else {
-                    if content.in_sel(chars) {
-                        write!(self.stdout, "{}", style::Invert)?;
+            if line.char_count() > 0 {
+                let line_start_char_index = content.line_index_to_char_index(line_index);
+                for (x, c) in line.char_iter()
+                        .flat_map(|c| if c == '\t' {
+                                      iter::repeat(' ').take(TAB_LENGTH)
+                                  } else {
+                                      iter::repeat(c).take(1)
+                                  })
+                        .enumerate() {
+                    if x < lines_width {
+                        let char_index = line_start_char_index + x;
+                        if content.in_sel(char_index) {
+                            write!(self.stdout, "{}{}{}", style::Invert, c, style::Reset)?;
+                        } else {
+                            write!(self.stdout, "{}", c)?;
+                        }
                     }
-                    if c == '\t' {
-                        try!(write!(self.stdout,
-                                    "{}",
-                                    iter::repeat(" ").take(TAB_LENGTH).collect::<String>()));
-                        line_len += TAB_LENGTH;
-                    } else {
-                        write!(self.stdout, "{}", c)?;
-                        line_len += 1;
-                    }
-                    write!(self.stdout, "{}", style::Reset)?;
-                    chars += 1;
                 }
-            }
-            chars += 1;
-            if line_len <= 1 && content.in_sel(chars) {
+            } else if content.line_in_sel(line_offset + y) {
                 write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
             }
         }
         Ok(())
     }
-
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
         // TODO: column offsetting for long lines

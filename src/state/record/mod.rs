@@ -5,7 +5,7 @@ mod action;
 
 use std::collections::VecDeque;
 use std::io::Result;
-use super::{Movement, Editable, Saveable, Named, CharIter};
+use super::{Movement, Editable, Saveable, Named, CharIter, LineIter};
 use self::action::Action;
 use std::usize;
 
@@ -142,6 +142,7 @@ impl<T> Editable for Recorded<T>
             line_count() -> usize,
             len() -> usize,
             iter() -> CharIter,
+            lines() -> LineIter,
             iter_line(line: usize) -> CharIter,
             line_index_to_char_index(line: usize) -> usize,
     }

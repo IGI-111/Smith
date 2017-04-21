@@ -8,7 +8,7 @@ pub use self::record::Undoable;
 pub use self::select::{Select, Selectable};
 
 use std::io::Result;
-use ropey::RopeCharIter;
+use ropey::{RopeCharIter, RopeLineIter};
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
@@ -24,11 +24,13 @@ pub trait Editable {
     fn line_count(&self) -> usize;
     fn len(&self) -> usize;
     fn iter(&self) -> CharIter;
+    fn lines(&self) -> LineIter;
     fn iter_line(&self, line: usize) -> CharIter;
     fn line_index_to_char_index(&self, line: usize) -> usize;
 }
 
 pub type CharIter<'a> = RopeCharIter<'a>;
+pub type LineIter<'a> = RopeLineIter<'a>;
 
 pub trait Named {
     fn name(&self) -> &String;
