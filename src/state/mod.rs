@@ -8,7 +8,8 @@ pub use self::record::Undoable;
 pub use self::select::{Select, Selectable};
 
 use std::io::Result;
-use ropey::{RopeCharIter, RopeLineIter};
+
+pub use xi_rope::Lines;
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);
@@ -18,19 +19,18 @@ pub trait Editable {
     fn insert_forward(&mut self, c: char);
     fn delete(&mut self) -> Option<char>;
     fn delete_forward(&mut self) -> Option<char>;
+    fn delete_range(&mut self, start: usize, end: usize);
+
     fn pos(&self) -> usize;
     fn line(&self) -> usize;
     fn col(&self) -> usize;
     fn line_count(&self) -> usize;
     fn len(&self) -> usize;
-    fn iter(&self) -> CharIter;
-    fn lines(&self) -> LineIter;
-    fn iter_line(&self, line: usize) -> CharIter;
-    fn line_index_to_char_index(&self, line: usize) -> usize;
-}
 
-pub type CharIter<'a> = RopeCharIter<'a>;
-pub type LineIter<'a> = RopeLineIter<'a>;
+    fn lines(&self) -> Lines;
+    fn slice(&self, start: usize, end: usize) -> String;
+    fn offset_of_line(&self, line: usize) -> usize;
+}
 
 pub trait Named {
     fn name(&self) -> &String;

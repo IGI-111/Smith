@@ -1,4 +1,4 @@
-use super::{Movement, Editable, Saveable, Named, Undoable, CharIter, LineIter};
+use super::{Movement, Editable, Saveable, Named, Undoable, Lines};
 use std::io::Result;
 
 pub type Selection = (usize, usize);
@@ -14,6 +14,8 @@ pub trait Selectable {
         }
     }
     fn line_in_sel(&self, line: usize) -> bool;
+    fn slice_sel(&self) -> String;
+    fn delete_sel(&mut self);
 }
 
 pub struct Select<T>
@@ -50,7 +52,20 @@ impl<T> Selectable for Select<T>
     }
 
     fn line_in_sel(&self, line: usize) -> bool {
-        self.in_sel(self.line_index_to_char_index(line))
+        self.in_sel(self.offset_of_line(line))
+    }
+
+    fn slice_sel(&self) -> String {
+        if let Some((beg, end)) = self.sel {
+            String::from(self.slice(beg, end).clone())
+        } else {
+            String::from("")
+        }
+    }
+    fn delete_sel(&mut self) {
+        if let Some((beg, end)) = self.sel {
+            self.delete_range(beg, end);
+        }
     }
 }
 
@@ -66,15 +81,15 @@ impl<T> Editable for Select<T>
             mut insert_forward(c: char) -> (),
             mut delete() -> Option<char>,
             mut delete_forward() -> Option<char>,
+            mut delete_range(start: usize, end: usize) -> (),
             pos() -> usize,
             line() -> usize,
             col() -> usize,
             line_count() -> usize,
             len() -> usize,
-            iter() -> CharIter,
-            lines() -> LineIter,
-            iter_line(line: usize) -> CharIter,
-            line_index_to_char_index(line: usize) -> usize,
+            lines() -> Lines,
+            slice(start: usize, end: usize) -> String,
+            offset_of_line(line: usize) -> usize,
     }
 }
 

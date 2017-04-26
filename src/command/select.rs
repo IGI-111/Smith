@@ -10,9 +10,7 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
 {
     match event {
         Event::Key(Key::Ctrl('c')) => {
-            let (beg, end) = content.sel().unwrap();
-
-            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
+            let selection = content.slice_sel();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
@@ -20,13 +18,11 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
             State::Insert
         }
         Event::Key(Key::Ctrl('x')) => {
-            let (beg, end) = content.sel().unwrap();
-
-            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
+            let selection = content.slice_sel();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
-            delete_sel(content);
+            content.delete_sel();
             view.adjust_view(content.line());
 
             content.reset_sel();
@@ -34,13 +30,13 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
         }
         Event::Key(Key::Backspace) |
         Event::Key(Key::Delete) => {
-            delete_sel(content);
+            content.delete_sel();
             view.adjust_view(content.line());
             content.reset_sel();
             State::Insert
         }
         Event::Key(Key::Char(_)) => {
-            delete_sel(content);
+            content.delete_sel();
             view.adjust_view(content.line());
             content.reset_sel();
             treat_insert_event(content, view, event)
@@ -51,18 +47,6 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
         }
     }
 }
-
-fn delete_sel<T>(content: &mut T)
-    where T: Selectable + Editable
-{
-    let (beg, end) = content.sel().unwrap();
-    let end = cmp::min(end + 1, content.len() - 1);
-    content.move_to(end);
-    for _ in beg..end {
-        content.delete();
-    }
-}
-
 
 pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> State
     where T: Editable + Selectable

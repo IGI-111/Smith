@@ -1,6 +1,6 @@
 extern crate termion;
 extern crate clipboard;
-extern crate ropey;
+extern crate xi_rope;
 
 #[macro_use]
 mod macros;

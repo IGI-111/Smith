@@ -89,7 +89,10 @@ impl View {
                                    2)) as usize;
         // find out if we clicked through a tab
         let col = content
-            .iter_line(line)
+            .lines()
+            .nth(line)
+            .unwrap()
+            .chars()
             .scan(0, |state, x| {
                 *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
@@ -194,9 +197,9 @@ impl View {
                    style::Reset,
                    cursor::Goto(1 + line_start, 1 + y as u16))?;
 
-            if line.char_count() > 0 {
-                let line_start_char_index = content.line_index_to_char_index(line_index);
-                for (x, c) in line.char_iter()
+            if line.len() > 0 {
+                let line_start_char_index = content.offset_of_line(line_index);
+                for (x, c) in line.chars()
                         .flat_map(|c| if c == '\t' {
                                       iter::repeat(' ').take(TAB_LENGTH)
                                   } else {
@@ -234,7 +237,10 @@ impl View {
         // we can't trust the actual column because tabs have variable length
         let visual_col = content.col();
         let column = content
-            .iter_line(line)
+            .lines()
+            .nth(line)
+            .unwrap()
+            .chars()
             .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
             .take(visual_col)
             .fold(0, |acc, x| acc + x);

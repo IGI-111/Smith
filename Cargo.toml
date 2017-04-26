@@ -9,5 +9,5 @@ license = "MIT"
 
 [dependencies]
 clipboard = "0.1.2"
-ropey = "0.3.0"
+xi-rope = "0.2"
 termion = "1.3"

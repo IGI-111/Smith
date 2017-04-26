@@ -5,7 +5,7 @@ mod action;
 
 use std::collections::VecDeque;
 use std::io::Result;
-use super::{Movement, Editable, Saveable, Named, CharIter, LineIter};
+use super::{Movement, Editable, Saveable, Named, Lines};
 use self::action::Action;
 use std::usize;
 
@@ -134,6 +134,15 @@ impl<T> Editable for Recorded<T>
         c
     }
 
+    fn delete_range(&mut self, start: usize, end: usize) {
+        let text = self.slice(start, end);
+        let pos = self.pos();
+        self.content.delete_range(start, end);
+        self.record(Action::Move(end as isize - pos as isize));
+        self.record(Action::Delete(text));
+        self.record(Action::Move(pos as isize - start as isize));
+    }
+
     delegate!{
         content:
             pos() -> usize,
@@ -141,10 +150,9 @@ impl<T> Editable for Recorded<T>
             col() -> usize,
             line_count() -> usize,
             len() -> usize,
-            iter() -> CharIter,
-            lines() -> LineIter,
-            iter_line(line: usize) -> CharIter,
-            line_index_to_char_index(line: usize) -> usize,
+            lines() -> Lines,
+            slice(start: usize, end: usize) -> String,
+            offset_of_line(line: usize) -> usize,
     }
 }
 
