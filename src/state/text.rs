@@ -139,11 +139,13 @@ impl Editable for Text {
     }
 
     fn insert(&mut self, c: char) {
-        self.text.insert_text_at_char_index(&format!("{}", c), self.pos);
+        self.text
+            .insert_text_at_char_index(&format!("{}", c), self.pos);
         self.pos += 1;
     }
     fn insert_forward(&mut self, c: char) {
-        self.text.insert_text_at_char_index(&format!("{}", c), self.pos);
+        self.text
+            .insert_text_at_char_index(&format!("{}", c), self.pos);
     }
 
     fn delete(&mut self) -> Option<char> {
@@ -152,7 +154,8 @@ impl Editable for Text {
         } else {
             self.pos -= 1;
             let ch = self.text.char_at_index(self.pos);
-            self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
+            self.text
+                .remove_text_between_char_indices(self.pos, self.pos + 1);
             Some(ch)
         }
     }
@@ -160,7 +163,8 @@ impl Editable for Text {
     fn delete_forward(&mut self) -> Option<char> {
         if self.pos < self.len() - 1 {
             let ch = self.text.char_at_index(self.pos);
-            self.text.remove_text_between_char_indices(self.pos, self.pos + 1);
+            self.text
+                .remove_text_between_char_indices(self.pos, self.pos + 1);
             Some(ch)
         } else {
             None
@@ -176,11 +180,7 @@ impl Editable for Text {
     fn move_at(&mut self, line: usize, col: usize) {
         let line = cmp::min(line, self.line_count() - 1);
         let col = cmp::min(col,
-                           self.text
-                               .line_iter()
-                               .nth(line)
-                               .unwrap()
-                               .char_count() - 1);
+                           self.text.line_iter().nth(line).unwrap().char_count() - 1);
         self.pos = self.text.line_index_to_char_index(line) + col;
     }
 

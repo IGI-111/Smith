@@ -70,7 +70,6 @@ impl View {
     pub fn render<T>(&mut self, content: &T) -> Result<()>
         where T: Editable + Named + Selectable
     {
-        write!(self.stdout, "{}", clear::All)?;
         self.paint_lines(content)?;
         self.paint_status(content)?;
         self.paint_message()?;
@@ -89,7 +88,8 @@ impl View {
                                    self.line_number_width(content.line_count()) as isize -
                                    2)) as usize;
         // find out if we clicked through a tab
-        let col = content.iter_line(line)
+        let col = content
+            .iter_line(line)
             .scan(0, |state, x| {
                 *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
@@ -123,12 +123,7 @@ impl View {
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message
-                 .clone()
-                 .unwrap()
-                 .chars()
-                 .count() as u16,
-             self.lines_height() + 1)
+            (self.message.clone().unwrap().chars().count() as u16, self.lines_height() + 1)
         } else {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
@@ -181,17 +176,21 @@ impl View {
 
         let line_start = self.line_number_width(line_count) + 1;
 
-        for (y, line) in content.lines()
+        write!(self.stdout, "{}", cursor::Hide)?;
+
+        for (y, line) in content
+                .lines()
                 .skip(line_offset)
                 .take(cmp::min(lines_height, line_count))
                 .enumerate() {
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
             write!(self.stdout,
-                   "{}{}{}{}{}",
-                   color::Fg(color::White),
+                   "{}{}{}{}{}{}",
                    cursor::Goto(1, 1 + y as u16),
-                   1 + line_index,
+                   clear::CurrentLine,
+                   color::Fg(color::White),
+                   1 + line_index, // the line number
                    style::Reset,
                    cursor::Goto(1 + line_start, 1 + y as u16))?;
 
@@ -204,8 +203,10 @@ impl View {
                                       iter::repeat(c).take(1)
                                   })
                         .enumerate() {
+
+                    let char_index = line_start_char_index + x;
+
                     if x < lines_width {
-                        let char_index = line_start_char_index + x;
                         if content.in_sel(char_index) {
                             write!(self.stdout, "{}{}{}", style::Invert, c, style::Reset)?;
                         } else {
@@ -214,9 +215,14 @@ impl View {
                     }
                 }
             } else if content.line_in_sel(line_offset + y) {
-                write!(self.stdout, "{} {}", style::Invert, style::Reset)?;
+                write!(self.stdout,
+                       "{}{} {}",
+                       clear::CurrentLine,
+                       style::Invert,
+                       style::Reset)?;
             }
         }
+        write!(self.stdout, "{}{}", clear::AfterCursor, cursor::Show)?;
         Ok(())
     }
 
@@ -227,7 +233,8 @@ impl View {
         let y = line - first_line as usize;
         // we can't trust the actual column because tabs have variable length
         let visual_col = content.col();
-        let column = content.iter_line(line)
+        let column = content
+            .iter_line(line)
             .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
             .take(visual_col)
             .fold(0, |acc, x| acc + x);

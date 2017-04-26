@@ -133,7 +133,8 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event) -> 
             content.step(Movement::LineEnd);
             State::Insert
         }
-        Event::Key(Key::Backspace) => {
+        Event::Key(Key::Backspace) |
+        Event::Key(Key::Ctrl('h')) => {
             content.delete();
             view.adjust_view(content.line());
             State::Insert
@@ -146,6 +147,10 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event) -> 
         Event::Key(Key::Char(c)) => {
             content.insert(c);
             view.adjust_view(content.line());
+            State::Insert
+        }
+        Event::Unsupported(u) => {
+            view.message(&format!("Unsupported escape sequence {:?}", u));
             State::Insert
         }
         _ => State::Insert,

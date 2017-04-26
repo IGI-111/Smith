@@ -12,10 +12,7 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
         Event::Key(Key::Ctrl('c')) => {
             let (beg, end) = content.sel().unwrap();
 
-            let selection: String = content.iter()
-                .skip(beg)
-                .take(end - beg + 1)
-                .collect();
+            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
@@ -25,10 +22,7 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
         Event::Key(Key::Ctrl('x')) => {
             let (beg, end) = content.sel().unwrap();
 
-            let selection: String = content.iter()
-                .skip(beg)
-                .take(end - beg + 1)
-                .collect();
+            let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
             let mut ctx = ClipboardContext::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
