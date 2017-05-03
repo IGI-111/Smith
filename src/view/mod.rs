@@ -1,6 +1,6 @@
 use state::{Selectable, Editable, Named};
 use std::cmp;
-use std::io::{stdout, Stdout, BufWriter, Write, Result};
+use std::io::{stdout, Stdout, Write, BufWriter, Result};
 use std::iter;
 use termion::terminal_size;
 use termion::input::MouseTerminal;
@@ -9,10 +9,10 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::{clear, style, cursor, color};
 
 pub struct View {
-    stdout: BufWriter<MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>>,
     message: Option<String>,
     is_prompt: bool,
     line_offset: u16,
+    _stdout_handle: MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>,
 }
 
 const TAB_LENGTH: usize = 4;
@@ -20,12 +20,12 @@ const TAB_LENGTH: usize = 4;
 impl View {
     pub fn new() -> Result<View> {
         Ok(View {
-            stdout: BufWriter::new(MouseTerminal::from(AlternateScreen::from(stdout()
-                                                                         .into_raw_mode()
-                                                                         .unwrap()))),
                message: None,
                is_prompt: false,
                line_offset: 0,
+               _stdout_handle: MouseTerminal::from(AlternateScreen::from(stdout()
+                                                                             .into_raw_mode()
+                                                                             .unwrap())),
            })
     }
 
@@ -67,14 +67,19 @@ impl View {
                            u16;
     }
 
-    pub fn render<T>(&mut self, content: &T) -> Result<()>
+    pub fn render<T>(&self, content: &T) -> Result<()>
         where T: Editable + Named + Selectable
     {
-        self.paint_lines(content)?;
-        self.paint_status(content)?;
-        self.paint_message()?;
-        self.paint_cursor(content)?;
-        self.stdout.flush()?;
+        // the held stdout will keep us in the correct mode
+        let mut out = BufWriter::new(stdout()); // get a new output stream
+
+        self.paint_lines(content, &mut out)?;
+        self.paint_status(content, &mut out)?;
+        self.paint_message(&mut out)?;
+        self.paint_cursor(content, &mut out)?;
+
+        let mut buf_out = out.into_inner()?;
+        buf_out.flush()?;
         Ok(())
     }
 
@@ -99,17 +104,18 @@ impl View {
         (line, col)
     }
 
-    fn paint_message(&mut self) -> Result<()> {
+    fn paint_message<W: Write>(&self, out: &mut W) -> Result<()> {
         if let Some(ref message) = self.message {
             let y = self.lines_height() + 1;
-            write!(self.stdout, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
-            self.stdout.flush()?;
+            write!(out, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
+            out.flush()?;
         }
         Ok(())
     }
 
-    fn paint_cursor<T>(&mut self, content: &T) -> Result<()>
-        where T: Editable + Selectable
+    fn paint_cursor<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+        where T: Editable + Selectable,
+              W: Write
     {
         // FIXME: don't print the cursor if off screen, though we should in the future for long
         // lines
@@ -117,7 +123,7 @@ impl View {
            content.line() as u16 >= self.line_offset + self.lines_height() ||
            content.col() as u16 >= self.lines_width(content.line_count()) ||
            content.sel().is_some() {
-            write!(self.stdout, "{}", cursor::Hide)?;
+            write!(out, "{}", cursor::Hide)?;
             return Ok(());
         }
 
@@ -128,15 +134,13 @@ impl View {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
         };
-        write!(self.stdout,
-               "{}{}",
-               cursor::Show,
-               cursor::Goto(1 + x, 1 + y))?;
+        write!(out, "{}{}", cursor::Show, cursor::Goto(1 + x, 1 + y))?;
         Ok(())
     }
 
-    fn paint_status<T>(&mut self, content: &T) -> Result<()>
-        where T: Editable + Named
+    fn paint_status<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+        where T: Editable + Named,
+              W: Write
     {
         let line = content.line();
         let column = content.col();
@@ -147,7 +151,7 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        write!(self.stdout,
+        write!(out,
                "{}{}{}{}{}{}",
                color::Fg(color::White),
                style::Invert,
@@ -158,7 +162,7 @@ impl View {
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        write!(self.stdout,
+        write!(out,
                "{}{}{}",
                cursor::Goto(1 + x, 1 + y),
                position_info,
@@ -166,8 +170,9 @@ impl View {
         Ok(())
     }
 
-    fn paint_lines<T>(&mut self, content: &T) -> Result<()>
-        where T: Editable + Selectable
+    fn paint_lines<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+        where T: Editable + Selectable,
+              W: Write
     {
         let line_offset = self.line_offset as usize;
         let lines_height = self.lines_height() as usize;
@@ -176,7 +181,7 @@ impl View {
 
         let line_start = self.line_number_width(line_count) + 1;
 
-        write!(self.stdout, "{}", cursor::Hide)?;
+        write!(out, "{}", cursor::Hide)?;
 
         for (y, line) in content
                 .lines()
@@ -185,7 +190,7 @@ impl View {
                 .enumerate() {
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
-            write!(self.stdout,
+            write!(out,
                    "{}{}{}{}{}{}",
                    cursor::Goto(1, 1 + y as u16),
                    clear::CurrentLine,
@@ -208,21 +213,21 @@ impl View {
 
                     if x < lines_width {
                         if content.in_sel(char_index) {
-                            write!(self.stdout, "{}{}{}", style::Invert, c, style::Reset)?;
+                            write!(out, "{}{}{}", style::Invert, c, style::Reset)?;
                         } else {
-                            write!(self.stdout, "{}", c)?;
+                            write!(out, "{}", c)?;
                         }
                     }
                 }
             } else if content.line_in_sel(line_offset + y) {
-                write!(self.stdout,
+                write!(out,
                        "{}{} {}",
                        clear::CurrentLine,
                        style::Invert,
                        style::Reset)?;
             }
         }
-        write!(self.stdout, "{}{}", clear::AfterCursor, cursor::Show)?;
+        write!(out, "{}{}", clear::AfterCursor, cursor::Show)?;
         Ok(())
     }
 
