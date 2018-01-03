@@ -1,6 +1,6 @@
 [package]
 name = "smith"
-version = "0.3.10"
+version = "0.4.0"
 authors = ["IGI-111 <igi.222@gmail.com>"]
 description = "Smith is a simple terminal-based text editor written in Rust."
 repository = "https://github.com/IGI-111/Smith"
