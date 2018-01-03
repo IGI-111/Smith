@@ -1,6 +1,8 @@
 extern crate termion;
 extern crate clipboard;
 extern crate ropey;
+extern crate unicode_width;
+extern crate unicode_segmentation;
 
 #[macro_use]
 mod macros;
@@ -35,7 +37,7 @@ fn edit_file(filename: Option<String>) {
 
     let stdin = stdin();
 
-    view.render(&text).unwrap();
+    view.render(&text);
 
     let mut events = stdin.events();
     loop {
@@ -44,18 +46,18 @@ fn edit_file(filename: Option<String>) {
                 break;
             }
         }
-        view.render(&text).unwrap();
+        view.render(&text);
     }
 }
 
 fn build_text(filename: Option<String>) -> Select<Recorded<Text>> {
     Select::new(Recorded::new(match filename {
-                                  Some(name) => {
-                                      match Text::open_file(name) {
-                                          Ok(v) => v,
-                                          Err(e) => panic!("{}", e),
-                                      }
-                                  }
-                                  None => Text::empty(),
-                              }))
+        Some(name) => {
+            match Text::open_file(name) {
+                Ok(v) => v,
+                Err(e) => panic!("{}", e),
+            }
+        }
+        None => Text::empty(),
+    }))
 }

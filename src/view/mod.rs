@@ -1,18 +1,16 @@
+mod screen;
+
 use state::{Selectable, Editable, Named};
-use std::cmp;
-use std::io::{stdout, Stdout, Write, BufWriter, Result};
-use std::iter;
-use termion::terminal_size;
-use termion::input::MouseTerminal;
-use termion::screen::AlternateScreen;
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::{clear, style, cursor, color};
+use std::io::Result;
+use std::{iter, cmp};
+use termion::{terminal_size, color, style};
+use self::screen::Screen;
 
 pub struct View {
     message: Option<String>,
     is_prompt: bool,
-    line_offset: u16,
-    _stdout_handle: MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>,
+    line_offset: usize,
+    screen: Screen,
 }
 
 const TAB_LENGTH: usize = 4;
@@ -23,9 +21,7 @@ impl View {
             message: None,
             is_prompt: false,
             line_offset: 0,
-            _stdout_handle: MouseTerminal::from(
-                AlternateScreen::from(stdout().into_raw_mode().unwrap()),
-            ),
+            screen: Screen::new(),
         })
     }
 
@@ -46,14 +42,11 @@ impl View {
     }
 
     pub fn center_view(&mut self, line: usize) {
-        self.line_offset = match line.checked_sub(self.lines_height() as usize / 2) {
-            None => 0,
-            Some(val) => val as u16,
-        }
+        self.line_offset = line.checked_sub(self.lines_height() as usize / 2)
+            .unwrap_or(0);
     }
 
     pub fn adjust_view(&mut self, line: usize) {
-        let line = line as u16;
         if line < self.line_offset {
             self.line_offset = line;
         } else if line + 1 >= self.line_offset + self.lines_height() {
@@ -65,24 +58,19 @@ impl View {
         self.line_offset = cmp::min(
             cmp::max((self.line_offset as isize) + offset, 0),
             (content.line_count() as isize) - 1,
-        ) as u16;
+        ) as usize;
     }
 
-    pub fn render<T>(&self, content: &T) -> Result<()>
+    pub fn render<T>(&mut self, content: &T)
     where
         T: Editable + Named + Selectable,
     {
-        // the held stdout will keep us in the correct mode
-        let mut out = BufWriter::new(stdout()); // get a new output stream
-
-        self.paint_lines(content, &mut out)?;
-        self.paint_status(content, &mut out)?;
-        self.paint_message(&mut out)?;
-        self.paint_cursor(content, &mut out)?;
-
-        let mut buf_out = out.into_inner()?;
-        buf_out.flush()?;
-        Ok(())
+        self.screen.clear(color::Reset);
+        self.paint_lines(content);
+        self.paint_status(content);
+        self.paint_message();
+        self.paint_cursor(content);
+        self.screen.present();
     }
 
     pub fn translate_coordinates<T>(&self, content: &T, x: u16, y: u16) -> (usize, usize)
@@ -110,49 +98,45 @@ impl View {
         (line, col)
     }
 
-    fn paint_message<W: Write>(&self, out: &mut W) -> Result<()> {
+    fn paint_message(&self) {
         if let Some(ref message) = self.message {
             let y = self.lines_height() + 1;
-            write!(out, "{}{}", cursor::Goto(1, 1 + y as u16), message)?;
-            out.flush()?;
+            self.screen.draw(0, y, message);
         }
-        Ok(())
     }
 
-    fn paint_cursor<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+    fn paint_cursor<T>(&mut self, content: &T)
     where
         T: Editable + Selectable,
-        W: Write,
     {
         // FIXME: don't print the cursor if off screen, though we should in the future for long
         // lines
-        if (content.line() as u16) < self.line_offset ||
-            content.line() as u16 >= self.line_offset + self.lines_height() ||
-            content.col() as u16 >= self.lines_width(content.line_count()) ||
+        if (content.line()) < self.line_offset ||
+            content.line() >= self.line_offset + self.lines_height() ||
+            content.col() >= self.lines_width(content.line_count()) ||
             content.sel().is_some()
         {
-            write!(out, "{}", cursor::Hide)?;
-            return Ok(());
+            self.screen.hide_cursor();
+            return;
         }
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
             (
-                self.message.clone().unwrap().chars().count() as u16,
+                self.message.clone().unwrap().chars().count(),
                 self.lines_height() + 1,
             )
         } else {
             let (a, b) = self.cursor_pos(content);
-            (a as u16, b as u16)
+            (a, b)
         };
-        write!(out, "{}{}", cursor::Show, cursor::Goto(1 + x, 1 + y))?;
-        Ok(())
+        self.screen.move_cursor(x, y);
+        self.screen.show_cursor();
     }
 
-    fn paint_status<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+    fn paint_status<T>(&self, content: &T)
     where
         T: Editable + Named,
-        W: Write,
     {
         let line = content.line();
         let column = content.col();
@@ -161,44 +145,42 @@ impl View {
 
         let (screen_width, _) = terminal_size().unwrap();
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
-        let y = self.lines_height() as u16;
+        let y = self.lines_height();
+        let style = format!("{}{}", color::Fg(color::White), style::Invert);
 
-        write!(
-            out,
-            "{}{}{}{}{}{}",
-            color::Fg(color::White),
-            style::Invert,
-            cursor::Goto(1, 1 + y),
-            empty_line,
-            cursor::Goto(1, 1 + y),
-            content.name()
-        )?;
+        self.screen.draw_with_style(
+            0,
+            y,
+            &empty_line,
+            style.clone(),
+        );
+        self.screen.draw_with_style(
+            0,
+            y,
+            content.name(),
+            style.clone(),
+        );
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
-        let x = screen_width - position_info.len() as u16;
-        write!(
-            out,
-            "{}{}{}",
-            cursor::Goto(1 + x, 1 + y),
-            position_info,
-            style::Reset
-        )?;
-        Ok(())
+        let x = screen_width as usize - position_info.len();
+        self.screen.draw_with_style(
+            x,
+            y,
+            &position_info,
+            style.clone(),
+        );
     }
 
-    fn paint_lines<T, W>(&self, content: &T, out: &mut W) -> Result<()>
+    fn paint_lines<T>(&self, content: &T)
     where
         T: Editable + Selectable,
-        W: Write,
     {
         let line_offset = self.line_offset as usize;
         let lines_height = self.lines_height() as usize;
         let lines_width = self.lines_width(content.line_count()) as usize;
         let line_count = content.line_count();
 
-        let line_start = self.line_number_width(line_count) + 1;
-
-        write!(out, "{}", cursor::Hide)?;
+        let line_start = self.line_number_width(line_count) as usize + 1;
 
         for (y, line) in content
             .lines()
@@ -208,50 +190,47 @@ impl View {
         {
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
-            write!(
-                out,
-                "{}{}{}{}{}{}",
-                cursor::Goto(1, 1 + y as u16),
-                clear::CurrentLine,
-                color::Fg(color::White),
-                1 + line_index, // the line number
-                style::Reset,
-                cursor::Goto(1 + line_start, 1 + y as u16)
-            )?;
+            self.screen.draw_with_style(
+                0,
+                y,
+                &format!("{}", 1 + line_index),
+                format!("{}", color::Fg(color::White)),
+            );
 
-            if line.len_chars() > 0 {
+            if line.len_chars() > 1 {
                 let line_start_char_index = content.line_index_to_char_index(line_index);
                 for (x, c) in line.chars()
                     .flat_map(|c| if c == '\t' {
-                        iter::repeat(' ').take(TAB_LENGTH)
+                        iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
                     } else {
                         iter::repeat(c).take(1)
                     })
                     .enumerate()
                 {
-
                     let char_index = line_start_char_index + x;
 
                     if x < lines_width {
                         if content.in_sel(char_index) {
-                            write!(out, "{}{}{}", style::Invert, c, style::Reset)?;
+                            self.screen.draw_with_style(
+                                x + line_start,
+                                y,
+                                &format!("{}", c),
+                                format!("{}", style::Invert),
+                            );
                         } else {
-                            write!(out, "{}", c)?;
+                            self.screen.draw(x + line_start, y, &format!("{}", c));
                         }
                     }
                 }
             } else if content.line_in_sel(line_offset + y) {
-                write!(
-                    out,
-                    "{}{} {}",
-                    clear::CurrentLine,
-                    style::Invert,
-                    style::Reset
-                )?;
+                self.screen.draw_with_style(
+                    line_start,
+                    y,
+                    " ".into(),
+                    format!("{}", style::Invert),
+                );
             }
         }
-        write!(out, "{}{}", clear::AfterCursor, cursor::Show)?;
-        Ok(())
     }
 
     fn cursor_pos<T: Editable>(&self, content: &T) -> (usize, usize) {
@@ -280,15 +259,15 @@ impl View {
         2
     }
 
-    pub fn lines_height(&self) -> u16 {
+    pub fn lines_height(&self) -> usize {
         let (_, screen_height) = terminal_size().unwrap();
-        let incompressible = self.status_height();
-        cmp::max(screen_height, incompressible) - incompressible
+        let incompressible = self.status_height() as usize;
+        cmp::max(screen_height as usize, incompressible) - incompressible
     }
 
-    pub fn lines_width(&self, line_count: usize) -> u16 {
+    pub fn lines_width(&self, line_count: usize) -> usize {
         let (screen_width, _) = terminal_size().unwrap();
-        let incompressible = self.line_number_width(line_count) + 1;
-        cmp::max(screen_width, incompressible) - incompressible
+        let incompressible = self.line_number_width(line_count) as usize + 1;
+        cmp::max(screen_width as usize, incompressible) - incompressible
     }
 }
