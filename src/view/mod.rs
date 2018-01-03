@@ -20,13 +20,13 @@ const TAB_LENGTH: usize = 4;
 impl View {
     pub fn new() -> Result<View> {
         Ok(View {
-               message: None,
-               is_prompt: false,
-               line_offset: 0,
-               _stdout_handle: MouseTerminal::from(AlternateScreen::from(stdout()
-                                                                             .into_raw_mode()
-                                                                             .unwrap())),
-           })
+            message: None,
+            is_prompt: false,
+            line_offset: 0,
+            _stdout_handle: MouseTerminal::from(
+                AlternateScreen::from(stdout().into_raw_mode().unwrap()),
+            ),
+        })
     }
 
     pub fn message(&mut self, message: &str) {
@@ -62,13 +62,15 @@ impl View {
     }
 
     pub fn scroll_view<T: Editable>(&mut self, offset: isize, content: &T) {
-        self.line_offset = cmp::min(cmp::max((self.line_offset as isize) + offset, 0),
-                                    (content.line_count() as isize) - 1) as
-                           u16;
+        self.line_offset = cmp::min(
+            cmp::max((self.line_offset as isize) + offset, 0),
+            (content.line_count() as isize) - 1,
+        ) as u16;
     }
 
     pub fn render<T>(&self, content: &T) -> Result<()>
-        where T: Editable + Named + Selectable
+    where
+        T: Editable + Named + Selectable,
     {
         // the held stdout will keep us in the correct mode
         let mut out = BufWriter::new(stdout()); // get a new output stream
@@ -84,14 +86,18 @@ impl View {
     }
 
     pub fn translate_coordinates<T>(&self, content: &T, x: u16, y: u16) -> (usize, usize)
-        where T: Editable
+    where
+        T: Editable,
     {
-        let line = cmp::min((y as isize + self.line_offset as isize - 1) as usize,
-                            content.line_count() - 1);
-        let visual_col = (cmp::max(0,
-                                   x as isize -
-                                   self.line_number_width(content.line_count()) as isize -
-                                   2)) as usize;
+        let line = cmp::min(
+            (y as isize + self.line_offset as isize - 1) as usize,
+            content.line_count() - 1,
+        );
+        let visual_col = (cmp::max(
+            0,
+            x as isize - self.line_number_width(content.line_count()) as isize -
+                2,
+        )) as usize;
         // find out if we clicked through a tab
         let col = content
             .iter_line(line)
@@ -114,22 +120,27 @@ impl View {
     }
 
     fn paint_cursor<T, W>(&self, content: &T, out: &mut W) -> Result<()>
-        where T: Editable + Selectable,
-              W: Write
+    where
+        T: Editable + Selectable,
+        W: Write,
     {
         // FIXME: don't print the cursor if off screen, though we should in the future for long
         // lines
         if (content.line() as u16) < self.line_offset ||
-           content.line() as u16 >= self.line_offset + self.lines_height() ||
-           content.col() as u16 >= self.lines_width(content.line_count()) ||
-           content.sel().is_some() {
+            content.line() as u16 >= self.line_offset + self.lines_height() ||
+            content.col() as u16 >= self.lines_width(content.line_count()) ||
+            content.sel().is_some()
+        {
             write!(out, "{}", cursor::Hide)?;
             return Ok(());
         }
 
         // in the case of a prompt, the cursor should be drawn in the message line
         let (x, y) = if self.is_prompt {
-            (self.message.clone().unwrap().chars().count() as u16, self.lines_height() + 1)
+            (
+                self.message.clone().unwrap().chars().count() as u16,
+                self.lines_height() + 1,
+            )
         } else {
             let (a, b) = self.cursor_pos(content);
             (a as u16, b as u16)
@@ -139,8 +150,9 @@ impl View {
     }
 
     fn paint_status<T, W>(&self, content: &T, out: &mut W) -> Result<()>
-        where T: Editable + Named,
-              W: Write
+    where
+        T: Editable + Named,
+        W: Write,
     {
         let line = content.line();
         let column = content.col();
@@ -151,28 +163,33 @@ impl View {
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height() as u16;
 
-        write!(out,
-               "{}{}{}{}{}{}",
-               color::Fg(color::White),
-               style::Invert,
-               cursor::Goto(1, 1 + y),
-               empty_line,
-               cursor::Goto(1, 1 + y),
-               content.name())?;
+        write!(
+            out,
+            "{}{}{}{}{}{}",
+            color::Fg(color::White),
+            style::Invert,
+            cursor::Goto(1, 1 + y),
+            empty_line,
+            cursor::Goto(1, 1 + y),
+            content.name()
+        )?;
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width - position_info.len() as u16;
-        write!(out,
-               "{}{}{}",
-               cursor::Goto(1 + x, 1 + y),
-               position_info,
-               style::Reset)?;
+        write!(
+            out,
+            "{}{}{}",
+            cursor::Goto(1 + x, 1 + y),
+            position_info,
+            style::Reset
+        )?;
         Ok(())
     }
 
     fn paint_lines<T, W>(&self, content: &T, out: &mut W) -> Result<()>
-        where T: Editable + Selectable,
-              W: Write
+    where
+        T: Editable + Selectable,
+        W: Write,
     {
         let line_offset = self.line_offset as usize;
         let lines_height = self.lines_height() as usize;
@@ -184,30 +201,34 @@ impl View {
         write!(out, "{}", cursor::Hide)?;
 
         for (y, line) in content
-                .lines()
-                .skip(line_offset)
-                .take(cmp::min(lines_height, line_count))
-                .enumerate() {
+            .lines()
+            .skip(line_offset)
+            .take(cmp::min(lines_height, line_count))
+            .enumerate()
+        {
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
-            write!(out,
-                   "{}{}{}{}{}{}",
-                   cursor::Goto(1, 1 + y as u16),
-                   clear::CurrentLine,
-                   color::Fg(color::White),
-                   1 + line_index, // the line number
-                   style::Reset,
-                   cursor::Goto(1 + line_start, 1 + y as u16))?;
+            write!(
+                out,
+                "{}{}{}{}{}{}",
+                cursor::Goto(1, 1 + y as u16),
+                clear::CurrentLine,
+                color::Fg(color::White),
+                1 + line_index, // the line number
+                style::Reset,
+                cursor::Goto(1 + line_start, 1 + y as u16)
+            )?;
 
-            if line.char_count() > 0 {
+            if line.len_chars() > 0 {
                 let line_start_char_index = content.line_index_to_char_index(line_index);
-                for (x, c) in line.char_iter()
-                        .flat_map(|c| if c == '\t' {
-                                      iter::repeat(' ').take(TAB_LENGTH)
-                                  } else {
-                                      iter::repeat(c).take(1)
-                                  })
-                        .enumerate() {
+                for (x, c) in line.chars()
+                    .flat_map(|c| if c == '\t' {
+                        iter::repeat(' ').take(TAB_LENGTH)
+                    } else {
+                        iter::repeat(c).take(1)
+                    })
+                    .enumerate()
+                {
 
                     let char_index = line_start_char_index + x;
 
@@ -220,11 +241,13 @@ impl View {
                     }
                 }
             } else if content.line_in_sel(line_offset + y) {
-                write!(out,
-                       "{}{} {}",
-                       clear::CurrentLine,
-                       style::Invert,
-                       style::Reset)?;
+                write!(
+                    out,
+                    "{}{} {}",
+                    clear::CurrentLine,
+                    style::Invert,
+                    style::Reset
+                )?;
             }
         }
         write!(out, "{}{}", clear::AfterCursor, cursor::Show)?;
@@ -243,7 +266,10 @@ impl View {
             .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
             .take(visual_col)
             .fold(0, |acc, x| acc + x);
-        ((self.line_number_width(content.line_count()) as usize + 1 + column), y)
+        (
+            (self.line_number_width(content.line_count()) as usize + 1 + column),
+            y,
+        )
     }
 
     fn line_number_width(&self, line_count: usize) -> u16 {

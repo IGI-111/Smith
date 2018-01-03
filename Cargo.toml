@@ -8,6 +8,6 @@ keywords = [ "text", "editor", "terminal", "termion" ]
 license = "MIT"
 
 [dependencies]
-clipboard = "0.1.2"
-ropey = "0.3.0"
+clipboard = "0.1"
+ropey = "0.5"
 termion = "1.3"

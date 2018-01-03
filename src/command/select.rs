@@ -6,7 +6,8 @@ use clipboard::ClipboardContext;
 use super::{State, treat_insert_event};
 
 pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -> State
-    where T: Selectable + Editable + Named + Undoable
+where
+    T: Selectable + Editable + Named + Undoable,
 {
     match event {
         Event::Key(Key::Ctrl('c')) => {
@@ -53,7 +54,8 @@ pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -
 }
 
 fn delete_sel<T>(content: &mut T)
-    where T: Selectable + Editable
+where
+    T: Selectable + Editable,
 {
     let (beg, end) = content.sel().unwrap();
     let end = cmp::min(end + 1, content.len() - 1);
@@ -65,13 +67,17 @@ fn delete_sel<T>(content: &mut T)
 
 
 pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> State
-    where T: Editable + Selectable
+where
+    T: Editable + Selectable,
 {
     match event {
         Event::Mouse(MouseEvent::Hold(x, y)) => {
             let (line, col) = view.translate_coordinates(content, x, y);
             content.move_at(line, col);
-            let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+            let sel = (
+                cmp::min(origin, content.pos()),
+                cmp::max(origin, content.pos()),
+            );
             content.set_sel(sel);
             State::Select(origin)
         }
@@ -79,7 +85,10 @@ pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, ori
             let (line, col) = view.translate_coordinates(content, x, y);
             content.move_at(line, col);
             if origin != content.pos() {
-                let sel = (cmp::min(origin, content.pos()), cmp::max(origin, content.pos()));
+                let sel = (
+                    cmp::min(origin, content.pos()),
+                    cmp::max(origin, content.pos()),
+                );
                 content.set_sel(sel);
                 State::Selected
             } else {

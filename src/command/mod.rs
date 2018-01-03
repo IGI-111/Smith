@@ -28,7 +28,8 @@ impl Command {
     }
 
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
-        where T: Editable + Saveable + Undoable + Selectable
+    where
+        T: Editable + Saveable + Undoable + Selectable,
     {
         self.state = match self.state.clone() {
             State::Prompt(prompt, message) => {
@@ -49,14 +50,16 @@ impl Command {
 }
 
 pub fn treat_message_event<T>(content: &mut T, view: &mut View, event: Event) -> State
-    where T: Editable + Named + Undoable
+where
+    T: Editable + Named + Undoable,
 {
     view.quiet();
     treat_insert_event(content, view, event)
 }
 
 pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event) -> State
-    where T: Editable + Named + Undoable
+where
+    T: Editable + Named + Undoable,
 {
     match event {
         Event::Key(Key::Ctrl('q')) |
@@ -157,13 +160,15 @@ pub fn treat_insert_event<T>(content: &mut T, view: &mut View, event: Event) -> 
     }
 }
 
-fn treat_prompt_event<T>(content: &mut T,
-                         view: &mut View,
-                         event: Event,
-                         prompt: String,
-                         mut message: String)
-                         -> State
-    where T: Editable + Saveable
+fn treat_prompt_event<T>(
+    content: &mut T,
+    view: &mut View,
+    event: Event,
+    prompt: String,
+    mut message: String,
+) -> State
+where
+    T: Editable + Saveable,
 {
     match event {
         Event::Key(Key::Char('\n')) => {
