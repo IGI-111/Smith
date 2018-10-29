@@ -16,24 +16,15 @@ pub enum State {
     Selected,
 }
 
-pub struct Command {
-    state: State,
-}
-
 const SCROLL_FACTOR: usize = 2;
 
-impl Command {
-    pub fn new() -> Command {
-        Command {
-            state: State::Insert,
-        }
-    }
-
-    pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
+impl State {
+    // Handles a Termion event, consuming the current state and returning the new state
+    pub fn treat_event<T>(self, content: &mut T, view: &mut View, event: Event) -> Self
     where
         T: Editable + Saveable + Undoable + Selectable,
     {
-        self.state = match self.state.clone() {
+        match self {
             State::Prompt(prompt, message) => {
                 treat_prompt_event(content, view, event, prompt, message)
             }
@@ -42,11 +33,6 @@ impl Command {
             State::Message => treat_message_event(content, view, event),
             State::Selected => treat_selected_event(content, view, event),
             State::Exit => panic!("continued after an Exit state"),
-        };
-        if let State::Exit = self.state {
-            true
-        } else {
-            false
         }
     }
 }
