@@ -100,8 +100,7 @@ impl Screen {
             out,
             "{}",
             termion::cursor::Goto(1 + cx as u16, 1 + cy as u16)
-        )
-        .unwrap();
+        ).unwrap();
 
         // Make sure everything is written out
         out.flush().unwrap();
@@ -153,8 +152,7 @@ impl Drop for Screen {
             color::Fg(color::Reset),
             color::Bg(color::Reset),
             termion::clear::All,
-        )
-        .unwrap();
+        ).unwrap();
         self.show_cursor();
     }
 }
