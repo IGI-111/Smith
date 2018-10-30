@@ -136,17 +136,18 @@ where
         c
     }
 
-    delegate!{
-        content:
-            pos() -> usize,
-            line() -> usize,
-            col() -> usize,
-            line_count() -> usize,
-            len() -> usize,
-            iter() -> CharIter,
-            lines() -> LineIter,
-            iter_line(line: usize) -> CharIter,
-            line_index_to_char_index(line: usize) -> usize,
+    delegate! {
+        target self.content {
+            fn pos(&self) -> usize;
+            fn line(&self) -> usize;
+            fn col(&self) -> usize;
+            fn line_count(&self) -> usize;
+            fn len(&self) -> usize;
+            fn iter(&self) -> CharIter;
+            fn lines(&self) -> LineIter;
+            fn iter_line(&self, line: usize) -> CharIter;
+            fn line_index_to_char_index(&self, line: usize) -> usize;
+        }
     }
 }
 
@@ -154,15 +155,21 @@ impl<T> Saveable for Recorded<T>
 where
     T: Editable + Saveable,
 {
-    delegate!{ content: save() -> Result<()> }
+    delegate! {
+        target self.content {
+            fn save(&self) -> Result<()>;
+        }
+    }
 }
 
 impl<T> Named for Recorded<T>
 where
     T: Editable + Named,
 {
-    delegate!{ content:
-        name() -> &String,
-        mut set_name(name: String) -> (),
+    delegate! {
+        target self.content {
+            fn name(&self) -> &String;
+            fn set_name(&mut self, name: String) -> ();
+        }
     }
 }

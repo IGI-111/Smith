@@ -58,24 +58,25 @@ impl<T> Editable for Select<T>
 where
     T: Editable,
 {
-    delegate!{
-        content:
-            mut step(mov: Movement) -> (),
-            mut move_to(pos: usize) -> (),
-            mut move_at(line: usize, col: usize) -> (),
-            mut insert(c: char) -> (),
-            mut insert_forward(c: char) -> (),
-            mut delete() -> Option<char>,
-            mut delete_forward() -> Option<char>,
-            pos() -> usize,
-            line() -> usize,
-            col() -> usize,
-            line_count() -> usize,
-            len() -> usize,
-            iter() -> CharIter,
-            lines() -> LineIter,
-            iter_line(line: usize) -> CharIter,
-            line_index_to_char_index(line: usize) -> usize,
+    delegate! {
+        target self.content {
+            fn step(&mut self, mov: Movement) -> ();
+            fn move_to(&mut self, pos: usize) -> ();
+            fn move_at(&mut self, line: usize, col: usize) -> ();
+            fn insert(&mut self, c: char) -> ();
+            fn insert_forward(&mut self, c: char) -> ();
+            fn delete(&mut self) -> Option<char>;
+            fn delete_forward(&mut self) -> Option<char>;
+            fn pos(&self) -> usize;
+            fn line(&self) -> usize;
+            fn col(&self) -> usize;
+            fn line_count(&self) -> usize;
+            fn len(&self) -> usize;
+            fn iter(&self) -> CharIter;
+            fn lines(&self) -> LineIter;
+            fn iter_line(&self, line: usize) -> CharIter;
+            fn line_index_to_char_index(&self, line: usize) -> usize;
+        }
     }
 }
 
@@ -83,15 +84,22 @@ impl<T> Saveable for Select<T>
 where
     T: Editable + Saveable,
 {
-    delegate!{ content: save() -> Result<()> }
+    delegate! {
+        target self.content {
+            fn save(&self) -> Result<()>;
+        }
+    }
 }
 
 impl<T> Named for Select<T>
 where
     T: Editable + Named,
 {
-    delegate!{ content: name() -> &String,
-        mut set_name(name: String) -> (),
+    delegate! {
+        target self.content {
+            fn name(&self) -> &String;
+            fn set_name(&mut self, name: String) -> ();
+        }
     }
 }
 
@@ -99,9 +107,10 @@ impl<T> Undoable for Select<T>
 where
     T: Editable + Undoable,
 {
-    delegate!{
-        content:
-            mut undo() -> (),
-            mut redo() -> (),
+    delegate! {
+        target self.content {
+            fn undo(&mut self) -> ();
+            fn redo(&mut self) -> ();
+        }
     }
 }
