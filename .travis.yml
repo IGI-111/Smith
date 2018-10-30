@@ -11,3 +11,12 @@ before_install:
 script:
   - cargo build --verbose
   - cargo build --release --verbose
+
+matrix:
+  include:
+    env: FMT
+    rust: stable
+    install:
+      - rustup component add rustfmt-preview
+    script:
+      - cargo fmt -- --check
