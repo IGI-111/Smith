@@ -164,7 +164,6 @@ where
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
 fn treat_prompt_event<T>(
     content: &mut T,
     view: &mut View,

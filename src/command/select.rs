@@ -65,7 +65,6 @@ where
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
 pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> State
 where
     T: Editable + Selectable,

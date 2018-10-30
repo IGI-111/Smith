@@ -1,5 +1,4 @@
 #![allow(unknown_lints)]
-#![allow(clippy::absurd_extreme_comparisons)]
 
 mod action;
 
