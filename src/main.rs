@@ -11,7 +11,7 @@ mod command;
 mod state;
 mod view;
 
-use command::Command;
+use command::State;
 use state::{Recorded, Select, Text};
 use std::env;
 use std::io::stdin;
@@ -32,7 +32,7 @@ fn main() {
 fn edit_file(filename: Option<String>) {
     let mut text = build_text(filename);
     let mut view = View::new();
-    let mut command = Command::new();
+    let mut state = State::Insert;
 
     let stdin = stdin();
 
@@ -41,8 +41,9 @@ fn edit_file(filename: Option<String>) {
     let mut events = stdin.events();
     loop {
         if let Some(event) = events.next() {
-            if command.treat_event(&mut text, &mut view, event.unwrap()) {
-                break;
+            state = match state.treat_event(&mut text, &mut view, event.unwrap()) {
+                State::Exit => break,
+                other => other,
             }
         }
         view.render(&text);
