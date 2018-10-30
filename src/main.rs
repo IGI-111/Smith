@@ -1,22 +1,22 @@
-extern crate termion;
 extern crate clipboard;
 extern crate ropey;
-extern crate unicode_width;
+extern crate termion;
 extern crate unicode_segmentation;
+extern crate unicode_width;
 
 #[macro_use]
 mod macros;
 
-mod view;
-mod state;
 mod command;
+mod state;
+mod view;
 
+use command::Command;
+use state::{Recorded, Select, Text};
 use std::env;
-use state::{Text, Recorded, Select};
-use view::View;
 use std::io::stdin;
 use termion::input::TermRead;
-use command::Command;
+use view::View;
 
 fn main() {
     let args = env::args();
@@ -30,9 +30,8 @@ fn main() {
 }
 
 fn edit_file(filename: Option<String>) {
-
     let mut text = build_text(filename);
-    let mut view = View::new().unwrap();
+    let mut view = View::new();
     let mut command = Command::new();
 
     let stdin = stdin();
@@ -52,12 +51,10 @@ fn edit_file(filename: Option<String>) {
 
 fn build_text(filename: Option<String>) -> Select<Recorded<Text>> {
     Select::new(Recorded::new(match filename {
-        Some(name) => {
-            match Text::open_file(name) {
-                Ok(v) => v,
-                Err(e) => panic!("{}", e),
-            }
-        }
+        Some(name) => match Text::open_file(name) {
+            Ok(v) => v,
+            Err(e) => panic!("{}", e),
+        },
         None => Text::empty(),
     }))
 }

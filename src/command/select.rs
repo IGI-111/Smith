@@ -1,9 +1,9 @@
-use state::{Named, Editable, Undoable, Selectable};
+use super::{treat_insert_event, State};
+use clipboard::{ClipboardContext, ClipboardProvider};
+use state::{Editable, Named, Selectable, Undoable};
+use std::cmp;
 use termion::event::{Event, Key, MouseEvent};
 use view::View;
-use std::cmp;
-use clipboard::ClipboardContext;
-use super::{State, treat_insert_event};
 
 pub fn treat_selected_event<T>(content: &mut T, view: &mut View, event: Event) -> State
 where
@@ -14,7 +14,7 @@ where
             let (beg, end) = content.sel().unwrap();
 
             let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
-            let mut ctx = ClipboardContext::new().unwrap();
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
             content.reset_sel();
@@ -24,7 +24,7 @@ where
             let (beg, end) = content.sel().unwrap();
 
             let selection: String = content.iter().skip(beg).take(end - beg + 1).collect();
-            let mut ctx = ClipboardContext::new().unwrap();
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
             ctx.set_contents(selection).unwrap();
 
             delete_sel(content);
@@ -33,8 +33,7 @@ where
             content.reset_sel();
             State::Insert
         }
-        Event::Key(Key::Backspace) |
-        Event::Key(Key::Delete) => {
+        Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
             delete_sel(content);
             view.adjust_view(content.line());
             content.reset_sel();
@@ -58,6 +57,7 @@ where
     T: Selectable + Editable,
 {
     let (beg, end) = content.sel().unwrap();
+    assert!(beg < end);
     let end = cmp::min(end + 1, content.len() - 1);
     content.move_to(end);
     for _ in beg..end {
@@ -65,7 +65,7 @@ where
     }
 }
 
-
+#[allow(clippy::needless_pass_by_value)]
 pub fn treat_select_event<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> State
 where
     T: Editable + Selectable,
@@ -94,7 +94,6 @@ where
             } else {
                 State::Insert
             }
-
         }
         _ => State::Select(origin),
     }

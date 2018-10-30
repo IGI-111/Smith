@@ -1,4 +1,4 @@
-use super::{Movement, Editable, Saveable, Named, Undoable, CharIter, LineIter};
+use super::{CharIter, Editable, LineIter, Movement, Named, Saveable, Undoable};
 use std::io::Result;
 
 pub type Selection = (usize, usize);
@@ -29,10 +29,7 @@ where
     T: Editable,
 {
     pub fn new(content: T) -> Select<T> {
-        Select {
-            content: content,
-            sel: None,
-        }
+        Select { content, sel: None }
     }
 }
 

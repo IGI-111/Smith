@@ -1,14 +1,14 @@
-mod text;
 mod record;
 mod select;
+mod text;
 
-pub use self::text::Text;
 pub use self::record::Recorded;
 pub use self::record::Undoable;
 pub use self::select::{Select, Selectable};
+pub use self::text::Text;
 
-use std::io::Result;
 use ropey;
+use std::io::Result;
 
 pub trait Editable {
     fn step(&mut self, mov: Movement);

@@ -1,9 +1,9 @@
+use super::{CharIter, Editable, LineIter, Movement, Named, Saveable};
 use ropey::Rope;
-use std::fs::File;
 use std::cmp;
-use std::io::{BufReader, Write, Result, Error, ErrorKind};
+use std::fs::File;
+use std::io::{BufReader, Error, ErrorKind, Result, Write};
 use std::path::Path;
-use super::{Movement, Editable, Named, Saveable, CharIter, LineIter};
 
 #[derive(Debug)]
 pub struct Text {
@@ -36,7 +36,7 @@ impl Text {
 
             Ok(Text {
                 pos: 0,
-                text: text,
+                text,
                 name: filename,
             })
         } else {
@@ -145,7 +145,7 @@ impl Editable for Text {
         } else {
             self.pos -= 1;
             let ch = self.text.char(self.pos);
-            self.text.remove(self.pos, self.pos + 1);
+            self.text.remove(self.pos..=self.pos);
             Some(ch)
         }
     }
@@ -153,7 +153,7 @@ impl Editable for Text {
     fn delete_forward(&mut self) -> Option<char> {
         if self.pos < self.len() - 1 {
             let ch = self.text.char(self.pos);
-            self.text.remove(self.pos, self.pos + 1);
+            self.text.remove(self.pos..=self.pos);
             Some(ch)
         } else {
             None
@@ -164,7 +164,6 @@ impl Editable for Text {
         assert!(pos < self.text.len_chars());
         self.pos = pos;
     }
-
 
     fn move_at(&mut self, line: usize, col: usize) {
         let line = cmp::min(line, self.line_count() - 1);

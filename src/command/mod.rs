@@ -1,10 +1,10 @@
 mod select;
 
-use state::{Named, Editable, Undoable, Saveable, Selectable, Movement};
-use termion::event::{Event, Key, MouseEvent, MouseButton};
-use view::View;
-use clipboard::ClipboardContext;
 use self::select::{treat_select_event, treat_selected_event};
+use clipboard::{ClipboardContext, ClipboardProvider};
+use state::{Editable, Movement, Named, Saveable, Selectable, Undoable};
+use termion::event::{Event, Key, MouseButton, MouseEvent};
+use view::View;
 
 #[derive(Debug, Clone)]
 pub enum State {
@@ -24,7 +24,9 @@ const SCROLL_FACTOR: usize = 2;
 
 impl Command {
     pub fn new() -> Command {
-        Command { state: State::Insert }
+        Command {
+            state: State::Insert,
+        }
     }
 
     pub fn treat_event<T>(&mut self, content: &mut T, view: &mut View, event: Event) -> bool
@@ -62,8 +64,7 @@ where
     T: Editable + Named + Undoable,
 {
     match event {
-        Event::Key(Key::Ctrl('q')) |
-        Event::Key(Key::Esc) => State::Exit,
+        Event::Key(Key::Ctrl('q')) | Event::Key(Key::Esc) => State::Exit,
         Event::Key(Key::Ctrl('s')) => {
             let prompt = "Save to: ".to_string();
             let message = content.name().to_string();
@@ -92,8 +93,12 @@ where
             State::Insert
         }
         Event::Key(Key::Ctrl('v')) => {
-            let ctx = ClipboardContext::new().unwrap();
-            for c in ctx.get_contents().unwrap().chars() {
+            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            for c in ctx
+                .get_contents()
+                .unwrap_or_else(|_| "".to_string())
+                .chars()
+            {
                 content.insert(c);
             }
             State::Insert
@@ -136,8 +141,7 @@ where
             content.step(Movement::LineEnd);
             State::Insert
         }
-        Event::Key(Key::Backspace) |
-        Event::Key(Key::Ctrl('h')) => {
+        Event::Key(Key::Backspace) | Event::Key(Key::Ctrl('h')) => {
             content.delete();
             view.adjust_view(content.line());
             State::Insert
@@ -160,6 +164,7 @@ where
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn treat_prompt_event<T>(
     content: &mut T,
     view: &mut View,
@@ -190,8 +195,7 @@ where
             view.prompt(&prompt, &message);
             State::Prompt(prompt, message)
         }
-        Event::Key(Key::Backspace) |
-        Event::Key(Key::Delete) => {
+        Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
             message.pop();
             view.prompt(&prompt, &message);
             State::Prompt(prompt, message)

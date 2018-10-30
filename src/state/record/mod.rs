@@ -1,12 +1,12 @@
 #![allow(unknown_lints)]
-#![allow(absurd_extreme_comparisons)]
+#![allow(clippy::absurd_extreme_comparisons)]
 
 mod action;
 
+use self::action::Action;
+use super::{CharIter, Editable, LineIter, Movement, Named, Saveable};
 use std::collections::VecDeque;
 use std::io::Result;
-use super::{Movement, Editable, Saveable, Named, CharIter, LineIter};
-use self::action::Action;
 use std::usize;
 
 const HISTORY_SIZE: usize = usize::MAX;
@@ -32,7 +32,7 @@ where
 {
     pub fn new(content: T) -> Recorded<T> {
         Recorded {
-            content: content,
+            content,
             history: VecDeque::new(),
             undone: VecDeque::new(),
         }
@@ -67,7 +67,6 @@ where
             self.undone.pop_back();
         }
         to_undo.invert().apply(&mut self.content);
-
     }
     fn redo(&mut self) {
         let to_redo = match self.undone.pop_front() {

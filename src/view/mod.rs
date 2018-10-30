@@ -1,10 +1,9 @@
 mod screen;
 
-use state::{Selectable, Editable, Named};
-use std::io::Result;
-use std::{iter, cmp};
-use termion::{terminal_size, color, style};
 use self::screen::Screen;
+use state::{Editable, Named, Selectable};
+use std::{cmp, iter};
+use termion::{color, style, terminal_size};
 
 pub struct View {
     message: Option<String>,
@@ -16,13 +15,13 @@ pub struct View {
 const TAB_LENGTH: usize = 4;
 
 impl View {
-    pub fn new() -> Result<View> {
-        Ok(View {
+    pub fn new() -> Self {
+        View {
             message: None,
             is_prompt: false,
             line_offset: 0,
             screen: Screen::new(),
-        })
+        }
     }
 
     pub fn message(&mut self, message: &str) {
@@ -42,7 +41,8 @@ impl View {
     }
 
     pub fn center_view(&mut self, line: usize) {
-        self.line_offset = line.checked_sub(self.lines_height() as usize / 2)
+        self.line_offset = line
+            .checked_sub(self.lines_height() as usize / 2)
             .unwrap_or(0);
     }
 
@@ -65,7 +65,7 @@ impl View {
     where
         T: Editable + Named + Selectable,
     {
-        self.screen.clear(color::Reset);
+        self.screen.clear(&color::Reset);
         self.paint_lines(content);
         self.paint_status(content);
         self.paint_message();
@@ -83,8 +83,7 @@ impl View {
         );
         let visual_col = (cmp::max(
             0,
-            x as isize - self.line_number_width(content.line_count()) as isize -
-                2,
+            x as isize - self.line_number_width(content.line_count()) as isize - 2,
         )) as usize;
         // find out if we clicked through a tab
         let col = content
@@ -111,10 +110,10 @@ impl View {
     {
         // FIXME: don't print the cursor if off screen, though we should in the future for long
         // lines
-        if (content.line()) < self.line_offset ||
-            content.line() >= self.line_offset + self.lines_height() ||
-            content.col() >= self.lines_width(content.line_count()) ||
-            content.sel().is_some()
+        if (content.line()) < self.line_offset
+            || content.line() >= self.line_offset + self.lines_height()
+            || content.col() >= self.lines_width(content.line_count())
+            || content.sel().is_some()
         {
             self.screen.hide_cursor();
             return;
@@ -148,27 +147,12 @@ impl View {
         let y = self.lines_height();
         let style = format!("{}{}", color::Fg(color::White), style::Invert);
 
-        self.screen.draw_with_style(
-            0,
-            y,
-            &empty_line,
-            style.clone(),
-        );
-        self.screen.draw_with_style(
-            0,
-            y,
-            content.name(),
-            style.clone(),
-        );
+        self.screen.draw_with_style(0, y, &empty_line, &style);
+        self.screen.draw_with_style(0, y, content.name(), &style);
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width as usize - position_info.len();
-        self.screen.draw_with_style(
-            x,
-            y,
-            &position_info,
-            style.clone(),
-        );
+        self.screen.draw_with_style(x, y, &position_info, &style);
     }
 
     fn paint_lines<T>(&self, content: &T)
@@ -194,16 +178,19 @@ impl View {
                 0,
                 y,
                 &format!("{}", 1 + line_index),
-                format!("{}", color::Fg(color::White)),
+                &format!("{}", color::Fg(color::White)),
             );
 
             if line.len_chars() > 1 {
                 let line_start_char_index = content.line_index_to_char_index(line_index);
-                for (x, c) in line.chars()
-                    .flat_map(|c| if c == '\t' {
-                        iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
-                    } else {
-                        iter::repeat(c).take(1)
+                for (x, c) in line
+                    .chars()
+                    .flat_map(|c| {
+                        if c == '\t' {
+                            iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
+                        } else {
+                            iter::repeat(c).take(1)
+                        }
                     })
                     .enumerate()
                 {
@@ -215,7 +202,7 @@ impl View {
                                 x + line_start,
                                 y,
                                 &format!("{}", c),
-                                format!("{}", style::Invert),
+                                &format!("{}", style::Invert),
                             );
                         } else {
                             self.screen.draw(x + line_start, y, &format!("{}", c));
@@ -223,12 +210,8 @@ impl View {
                     }
                 }
             } else if content.line_in_sel(line_offset + y) {
-                self.screen.draw_with_style(
-                    line_start,
-                    y,
-                    " ".into(),
-                    format!("{}", style::Invert),
-                );
+                self.screen
+                    .draw_with_style(line_start, y, " ", &format!("{}", style::Invert));
             }
         }
     }
@@ -240,11 +223,11 @@ impl View {
         let y = line - first_line as usize;
         // we can't trust the actual column because tabs have variable length
         let visual_col = content.col();
-        let column = content
+        let column: usize = content
             .iter_line(line)
             .map(|x| if x == '\t' { TAB_LENGTH } else { 1 })
             .take(visual_col)
-            .fold(0, |acc, x| acc + x);
+            .sum();
         (
             (self.line_number_width(content.line_count()) as usize + 1 + column),
             y,

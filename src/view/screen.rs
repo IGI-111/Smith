@@ -3,19 +3,19 @@ use std::cell::RefCell;
 use std::io;
 use std::io::{BufWriter, Write};
 
-use unicode_width::UnicodeWidthStr;
-use unicode_segmentation::UnicodeSegmentation;
 use termion;
-use termion::screen::AlternateScreen;
-use termion::input::MouseTerminal;
 use termion::color;
 use termion::color::Color;
-use termion::style;
+use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
+use termion::screen::AlternateScreen;
+use termion::style;
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 pub struct Screen {
     out: RefCell<MouseTerminal<AlternateScreen<RawTerminal<BufWriter<io::Stdout>>>>>,
-    buf: RefCell<Vec<Option<(Style, String)>>>,
+    buf: RefCell<Vec<Option<(String, String)>>>,
     w: usize,
     h: usize,
     cursor_pos: (usize, usize),
@@ -40,7 +40,7 @@ impl Screen {
         }
     }
 
-    pub fn clear<C>(&self, col: C)
+    pub fn clear<C>(&self, col: &C)
     where
         C: Color + Clone,
     {
@@ -53,11 +53,7 @@ impl Screen {
                 }
                 _ => {
                     *cell = Some((
-                        format!(
-                            "{}{}",
-                            color::Fg(col.clone()),
-                            color::Bg(col.clone())
-                        ),
+                        format!("{}{}", color::Fg(col.clone()), color::Bg(col.clone())),
                         " ".into(),
                     ));
                 }
@@ -69,13 +65,9 @@ impl Screen {
     pub fn resize(&mut self, w: usize, h: usize) {
         self.w = w;
         self.h = h;
-        self.buf.borrow_mut().resize(
-            w * h,
-            Some((
-                "".into(),
-                " ".into(),
-            )),
-        );
+        self.buf
+            .borrow_mut()
+            .resize(w * h, Some(("".into(), " ".into())));
     }
 
     pub fn present(&self) {
@@ -104,16 +96,21 @@ impl Screen {
         }
 
         let (cx, cy) = self.cursor_pos;
-        write!( out, "{}", termion::cursor::Goto(1 + cx as u16, 1 + cy as u16)).unwrap();
+        write!(
+            out,
+            "{}",
+            termion::cursor::Goto(1 + cx as u16, 1 + cy as u16)
+        )
+        .unwrap();
 
         // Make sure everything is written out
         out.flush().unwrap();
     }
     pub fn draw(&self, x: usize, y: usize, text: &str) {
-        self.draw_with_style(x, y, text, "".into());
+        self.draw_with_style(x, y, text, "");
     }
 
-    pub fn draw_with_style(&self, x: usize, y: usize, text: &str, style: Style) {
+    pub fn draw_with_style(&self, x: usize, y: usize, text: &str, style: &str) {
         if y < self.h {
             let mut buf = self.buf.borrow_mut();
             let mut x = x;
@@ -121,7 +118,7 @@ impl Screen {
                 let width = UnicodeWidthStr::width(g);
                 if width > 0 {
                     if x < self.w {
-                        buf[y * self.w + x] = Some((style.clone(), g.into()));
+                        buf[y * self.w + x] = Some((style.to_string(), g.into()));
                     }
                     x += 1;
                     for _ in 0..(width - 1) {
@@ -156,9 +153,8 @@ impl Drop for Screen {
             color::Fg(color::Reset),
             color::Bg(color::Reset),
             termion::clear::All,
-        ).unwrap();
+        )
+        .unwrap();
         self.show_cursor();
     }
 }
-
-pub type Style = String;
