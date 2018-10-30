@@ -1,11 +1,12 @@
+#![recursion_limit = "256"]
+
 extern crate clipboard;
 extern crate ropey;
 extern crate termion;
 extern crate unicode_segmentation;
 extern crate unicode_width;
-
 #[macro_use]
-mod macros;
+extern crate delegate;
 
 mod command;
 mod state;
