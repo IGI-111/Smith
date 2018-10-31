@@ -11,42 +11,13 @@ pub enum Action {
 
 impl PartialEq for Action {
     fn eq(&self, other: &Action) -> bool {
-        match *self {
-            Action::Insert(_) => {
-                if let Action::Insert(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::InsertForward(_) => {
-                if let Action::InsertForward(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::DeleteForward(_) => {
-                if let Action::DeleteForward(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::Delete(_) => {
-                if let Action::Delete(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::Move(_) => {
-                if let Action::Move(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
+        match (self, other) {
+            (Action::Insert(_), Action::Insert(_)) => true,
+            (Action::InsertForward(_), Action::InsertForward(_)) => true,
+            (Action::DeleteForward(_), Action::DeleteForward(_)) => true,
+            (Action::Delete(_), Action::Delete(_)) => true,
+            (Action::Move(_), Action::Move(_)) => true,
+            _ => false,
         }
     }
 }
