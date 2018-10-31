@@ -91,7 +91,8 @@ impl View {
             .scan(0, |state, x| {
                 *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
-            }).take_while(|&x| x <= visual_col)
+            })
+            .take_while(|&x| x <= visual_col)
             .count();
         (line, col)
     }
@@ -190,7 +191,8 @@ impl View {
                         } else {
                             iter::repeat(c).take(1)
                         }
-                    }).enumerate()
+                    })
+                    .enumerate()
                 {
                     let char_index = line_start_char_index + x;
 
