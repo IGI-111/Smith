@@ -9,11 +9,11 @@ extern crate unicode_width;
 extern crate delegate;
 
 mod command;
-mod state;
+mod data;
 mod view;
 
 use command::State;
-use state::{Recorded, Select, Text};
+use data::{Recorded, Select, Text};
 use std::env;
 use std::io::stdin;
 use termion::input::TermRead;

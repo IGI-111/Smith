@@ -1,7 +1,7 @@
 mod screen;
 
 use self::screen::Screen;
-use state::{Editable, Named, Selectable};
+use data::{Editable, Named, Selectable};
 use std::{cmp, iter};
 use termion::{color, style, terminal_size};
 

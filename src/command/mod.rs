@@ -1,5 +1,5 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
-use state::{Editable, Movement, Named, Saveable, Selectable, Undoable};
+use data::{Editable, Movement, Named, Saveable, Selectable, Undoable};
 use std::cmp;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use view::View;

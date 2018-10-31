@@ -1,4 +1,4 @@
-use state::Editable;
+use super::super::Editable;
 
 #[derive(Clone, Debug)]
 pub enum Action {
