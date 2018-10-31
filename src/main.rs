@@ -42,10 +42,9 @@ fn edit_file(filename: Option<String>) {
     let mut events = stdin.events();
     loop {
         if let Some(event) = events.next() {
-            state = if let Some(next_state) = state.handle(&mut text, &mut view, event.unwrap()) {
-                next_state
-            } else {
-                break;
+            state = match state.handle(&mut text, &mut view, event.unwrap()) {
+                Some(state) => state,
+                None => break,
             }
         }
         view.render(&text);
