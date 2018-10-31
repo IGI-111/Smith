@@ -9,19 +9,6 @@ pub enum Action {
     DeleteForward(String),
 }
 
-impl PartialEq for Action {
-    fn eq(&self, other: &Action) -> bool {
-        match (self, other) {
-            (Action::Insert(_), Action::Insert(_)) => true,
-            (Action::InsertForward(_), Action::InsertForward(_)) => true,
-            (Action::DeleteForward(_), Action::DeleteForward(_)) => true,
-            (Action::Delete(_), Action::Delete(_)) => true,
-            (Action::Move(_), Action::Move(_)) => true,
-            _ => false,
-        }
-    }
-}
-
 impl Action {
     pub fn apply<T: Editable>(&self, content: &mut T) {
         match *self {
@@ -63,7 +50,7 @@ impl Action {
     }
 
     pub fn join(&mut self, act: Action) {
-        assert_eq!(act, *self);
+        assert!(self.same_variant(&act));
         match *self {
             Action::Insert(ref mut s) => {
                 let act_string = match act {
@@ -102,6 +89,17 @@ impl Action {
                 };
                 *rel += act_rel;
             }
+        }
+    }
+
+    pub fn same_variant(&self, other: &Action) -> bool {
+        match (self, other) {
+            (Action::Insert(_), Action::Insert(_)) => true,
+            (Action::InsertForward(_), Action::InsertForward(_)) => true,
+            (Action::DeleteForward(_), Action::DeleteForward(_)) => true,
+            (Action::Delete(_), Action::Delete(_)) => true,
+            (Action::Move(_), Action::Move(_)) => true,
+            _ => false,
         }
     }
 }
