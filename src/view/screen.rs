@@ -19,6 +19,7 @@ pub struct Screen {
     w: usize,
     h: usize,
     cursor_pos: (usize, usize),
+    cursor_visible: bool,
 }
 
 impl Screen {
@@ -37,6 +38,7 @@ impl Screen {
             w: w as usize,
             h: h as usize,
             cursor_pos: (0, 0),
+            cursor_visible: true,
         }
     }
 
@@ -74,6 +76,7 @@ impl Screen {
         let mut out = self.out.borrow_mut();
         let buf = self.buf.borrow();
 
+        write!(out, "{}", termion::cursor::Hide).unwrap();
         let mut last_style = "";
         write!(out, "{}", last_style).unwrap();
 
@@ -95,12 +98,16 @@ impl Screen {
             }
         }
 
-        let (cx, cy) = self.cursor_pos;
-        write!(
-            out,
-            "{}",
-            termion::cursor::Goto(1 + cx as u16, 1 + cy as u16)
-        ).unwrap();
+        if self.cursor_visible {
+            let (cx, cy) = self.cursor_pos;
+            write!(
+                out,
+                "{}{}",
+                termion::cursor::Goto(1 + cx as u16, 1 + cy as u16),
+                termion::cursor::Show,
+            )
+            .unwrap();
+        }
 
         // Make sure everything is written out
         out.flush().unwrap();
@@ -131,12 +138,12 @@ impl Screen {
         }
     }
 
-    pub fn hide_cursor(&self) {
-        write!(self.out.borrow_mut(), "{}", termion::cursor::Hide).unwrap();
+    pub fn hide_cursor(&mut self) {
+        self.cursor_visible = false;
     }
 
-    pub fn show_cursor(&self) {
-        write!(self.out.borrow_mut(), "{}", termion::cursor::Show).unwrap();
+    pub fn show_cursor(&mut self) {
+        self.cursor_visible = true;
     }
 
     pub fn move_cursor(&mut self, x: usize, y: usize) {
@@ -152,7 +159,8 @@ impl Drop for Screen {
             color::Fg(color::Reset),
             color::Bg(color::Reset),
             termion::clear::All,
-        ).unwrap();
+        )
+        .unwrap();
         self.show_cursor();
     }
 }
