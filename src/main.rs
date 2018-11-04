@@ -38,7 +38,7 @@ fn main() {
 }
 
 fn edit_file(filename: &Option<String>) {
-    let ps = SyntaxSet::load_defaults_newlines();
+    let ps = SyntaxSet::load_defaults_nonewlines();
     let ts: Theme = from_binary(include_bytes!("../assets/gruvbox.themedump"));
     let mut text = build_text(&filename);
     let mut view = build_view(&filename, &ps, &ts);
@@ -72,23 +72,14 @@ fn build_text(filename: &Option<String>) -> Select<Recorded<Text>> {
     }))
 }
 
-fn build_view<'a>(filename: &Option<String>, ps: &SyntaxSet, theme: &'a Theme) -> View<'a> {
-    match filename {
-        Some(name) => {
-            let extension = match Path::new(&name).extension() {
-                Some(osstr) => match osstr.to_str() {
-                    Some(s) => s,
-                    None => return View::new(theme),
-                },
-                None => return View::new(theme),
-            };
+fn build_view<'a>(filename: &Option<String>, ps: &'a SyntaxSet, theme: &'a Theme) -> View<'a> {
+    let syntax = match filename {
+        Some(filename) => ps
+            .find_syntax_for_file(filename)
+            .unwrap()
+            .unwrap_or_else(|| ps.find_syntax_plain_text()),
+        None => ps.find_syntax_plain_text(),
+    };
 
-            let syntax = match ps.find_syntax_by_extension(extension) {
-                Some(syn) => syn,
-                None => return View::new(theme),
-            };
-            View::with_syntax(syntax, theme)
-        }
-        None => View::new(theme),
-    }
+    View::new(theme, syntax, ps)
 }

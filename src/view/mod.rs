@@ -3,26 +3,25 @@ mod screen;
 use self::screen::Screen;
 use data::{Editable, Named, Selectable};
 use std::{cmp, iter};
-use termion::terminal_size;
-
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Theme;
 use syntect::highlighting::{Color, FontStyle, Style};
-use syntect::parsing::syntax_definition::SyntaxDefinition;
-
+use syntect::parsing::{SyntaxReference, SyntaxSet};
+use termion::terminal_size;
 pub struct View<'a> {
     message: Option<String>,
     is_prompt: bool,
     line_offset: usize,
     screen: Screen,
-    highlighter: Option<HighlightLines<'a>>,
+    highlighter: HighlightLines<'a>,
     theme: &'a Theme,
+    syntax_set: &'a SyntaxSet,
 }
 
 const TAB_LENGTH: usize = 4;
 
 impl<'a> View<'a> {
-    pub fn new(theme: &'a Theme) -> Self {
+    pub fn new(theme: &'a Theme, syntax: &'a SyntaxReference, syntax_set: &'a SyntaxSet) -> Self {
         let default_style = Style {
             foreground: theme.settings.foreground.unwrap_or(Color::WHITE),
             background: theme.settings.background.unwrap_or(Color::BLACK),
@@ -33,15 +32,10 @@ impl<'a> View<'a> {
             is_prompt: false,
             line_offset: 0,
             screen: Screen::with_default_style(default_style),
-            highlighter: None,
+            highlighter: HighlightLines::new(syntax, theme),
             theme,
+            syntax_set,
         }
-    }
-
-    pub fn with_syntax(syntax: &SyntaxDefinition, theme: &'a Theme) -> Self {
-        let mut res = View::new(theme);
-        res.highlighter = Some(HighlightLines::new(syntax, theme));
-        res
     }
 
     pub fn message(&mut self, message: &str) {
@@ -226,15 +220,8 @@ impl<'a> View<'a> {
                 }).collect::<String>();
             line_str.pop();
 
-            match self.highlighter {
-                Some(ref mut h) => {
-                    let ranges: Vec<(Style, &str)> = h.highlight(&line_str);
-                    self.screen.draw_ranges(line_start, y, ranges);
-                }
-                None => {
-                    self.screen.draw(line_start, y, &line_str);
-                }
-            };
+            let ranges: Vec<(Style, &str)> = self.highlighter.highlight(&line_str, self.syntax_set);
+            self.screen.draw_ranges(line_start, y, ranges);
 
             // if line.len_chars() > 1 {
             //     let line_start_char_index = content.line_index_to_char_index(line_index);
