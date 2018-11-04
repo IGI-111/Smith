@@ -20,12 +20,13 @@ cargo install smith
 ## Features
 
 * line numbers
+* syntax highlighting
 * undo/redo
 * standard keybindings (Ctrl-S, Ctrl-Z, Ctrl-C, Esc...)
 * mouse support
 * clipboard support
 
-With more planned such as syntax highlighting, user configurations, search & replace, persistent undo, etc.
+With more planned such as user configurations, search & replace, persistent undo, etc.
 
 Here's what it looks like editing its own source code:
 
