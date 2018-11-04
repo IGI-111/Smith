@@ -3,25 +3,45 @@ mod screen;
 use self::screen::Screen;
 use data::{Editable, Named, Selectable};
 use std::{cmp, iter};
-use termion::{color, style, terminal_size};
+use termion::terminal_size;
 
-pub struct View {
+use syntect::easy::HighlightLines;
+use syntect::highlighting::Theme;
+use syntect::highlighting::{Color, FontStyle, Style};
+use syntect::parsing::syntax_definition::SyntaxDefinition;
+
+pub struct View<'a> {
     message: Option<String>,
     is_prompt: bool,
     line_offset: usize,
     screen: Screen,
+    highlighter: Option<HighlightLines<'a>>,
+    theme: &'a Theme,
 }
 
 const TAB_LENGTH: usize = 4;
 
-impl View {
-    pub fn new() -> Self {
+impl<'a> View<'a> {
+    pub fn new(theme: &'a Theme) -> Self {
+        let default_style = Style {
+            foreground: theme.settings.foreground.unwrap_or(Color::WHITE),
+            background: theme.settings.background.unwrap_or(Color::BLACK),
+            font_style: FontStyle::empty(),
+        };
         View {
             message: None,
             is_prompt: false,
             line_offset: 0,
-            screen: Screen::new(),
+            screen: Screen::with_default_style(default_style),
+            highlighter: None,
+            theme,
         }
+    }
+
+    pub fn with_syntax(syntax: &SyntaxDefinition, theme: &'a Theme) -> Self {
+        let mut res = View::new(theme);
+        res.highlighter = Some(HighlightLines::new(syntax, theme));
+        res
     }
 
     pub fn message(&mut self, message: &str) {
@@ -65,7 +85,7 @@ impl View {
     where
         T: Editable + Named + Selectable,
     {
-        self.screen.clear(&color::Reset);
+        self.screen.clear();
         self.paint_lines(content);
         self.paint_status(content);
         self.paint_message();
@@ -144,23 +164,27 @@ impl View {
         let (screen_width, _) = terminal_size().unwrap();
         let empty_line = (0..screen_width).map(|_| ' ').collect::<String>();
         let y = self.lines_height();
-        let style = format!("{}{}", color::Fg(color::White), style::Invert);
 
-        self.screen.draw_with_style(0, y, &empty_line, &style);
-        self.screen.draw_with_style(0, y, content.name(), &style);
+        let style = Style {
+            background: self.theme.settings.background.unwrap_or(Color::BLACK),
+            foreground: self.theme.settings.foreground.unwrap_or(Color::WHITE),
+            font_style: FontStyle::empty(),
+        };
+
+        self.screen.draw_with_style(0, y, style, &empty_line);
+        self.screen.draw_with_style(0, y, style, content.name());
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width as usize - position_info.len();
-        self.screen.draw_with_style(x, y, &position_info, &style);
+        self.screen.draw_with_style(x, y, style, &position_info);
     }
 
-    fn paint_lines<T>(&self, content: &T)
+    fn paint_lines<T>(&mut self, content: &T)
     where
         T: Editable + Selectable,
     {
         let line_offset = self.line_offset as usize;
         let lines_height = self.lines_height() as usize;
-        let lines_width = self.lines_width(content.line_count()) as usize;
         let line_count = content.line_count();
 
         let line_start = self.line_number_width(line_count) as usize + 1;
@@ -173,44 +197,76 @@ impl View {
         {
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
-            self.screen.draw_with_style(
-                0,
-                y,
-                &format!("{}", 1 + line_index),
-                &format!("{}", color::Fg(color::White)),
-            );
+            let line_number_style = Style {
+                background: self.theme.settings.gutter.unwrap_or(Color {
+                    r: 40,
+                    g: 40,
+                    b: 40,
+                    a: 255,
+                }),
+                foreground: self.theme.settings.gutter_foreground.unwrap_or(Color {
+                    r: 146,
+                    g: 131,
+                    b: 116,
+                    a: 255,
+                }),
+                font_style: FontStyle::empty(),
+            };
+            self.screen
+                .draw_with_style(0, y, line_number_style, &format!("{}", 1 + line_index));
 
-            if line.len_chars() > 1 {
-                let line_start_char_index = content.line_index_to_char_index(line_index);
-                for (x, c) in line
-                    .chars()
-                    .flat_map(|c| {
-                        if c == '\t' {
-                            iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
-                        } else {
-                            iter::repeat(c).take(1)
-                        }
-                    }).enumerate()
-                {
-                    let char_index = line_start_char_index + x;
-
-                    if x < lines_width {
-                        if content.in_sel(char_index) {
-                            self.screen.draw_with_style(
-                                x + line_start,
-                                y,
-                                &format!("{}", c),
-                                &format!("{}", style::Invert),
-                            );
-                        } else {
-                            self.screen.draw(x + line_start, y, &format!("{}", c));
-                        }
+            let mut line_str = line
+                .chars()
+                .flat_map(|c| {
+                    if c == '\t' {
+                        iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
+                    } else {
+                        iter::repeat(c).take(1)
                     }
+                }).collect::<String>();
+            line_str.pop();
+
+            match self.highlighter {
+                Some(ref mut h) => {
+                    let ranges: Vec<(Style, &str)> = h.highlight(&line_str);
+                    self.screen.draw_ranges(line_start, y, ranges);
                 }
-            } else if content.line_in_sel(line_offset + y) {
-                self.screen
-                    .draw_with_style(line_start, y, " ", &format!("{}", style::Invert));
-            }
+                None => {
+                    self.screen.draw(line_start, y, &line_str);
+                }
+            };
+
+            // if line.len_chars() > 1 {
+            //     let line_start_char_index = content.line_index_to_char_index(line_index);
+            //     for (x, c) in line
+            //         .chars()
+            //         .flat_map(|c| {
+            //             if c == '\t' {
+            //                 iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
+            //             } else {
+            //                 iter::repeat(c).take(1)
+            //             }
+            //         }).enumerate()
+            //     {
+            //         let char_index = line_start_char_index + x;
+
+            //         if x < lines_width {
+            //             if content.in_sel(char_index) {
+            //                 self.screen.draw_with_style(
+            //                     x + line_start,
+            //                     y,
+            //                     &format!("{}", c),
+            //                     &format!("{}", style::Invert),
+            //                 );
+            //             } else {
+            //                 self.screen.draw(x + line_start, y, &format!("{}", c));
+            //             }
+            //         }
+            //     }
+            // } else if content.line_in_sel(line_offset + y) {
+            //     self.screen
+            //         .draw_with_style(line_start, y, " ", &format!("{}", style::Invert));
+            // }
         }
     }
 

@@ -1,33 +1,31 @@
+use ndarray::{Array, Array2};
 use std;
 use std::cell::RefCell;
+use std::fmt::Write as FmtWrite;
 use std::io;
 use std::io::{BufWriter, Write};
-
+use syntect::highlighting::Style;
 use termion;
 use termion::color;
-use termion::color::Color;
 use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 use termion::style;
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
 
 pub struct Screen {
     out: RefCell<MouseTerminal<AlternateScreen<RawTerminal<BufWriter<io::Stdout>>>>>,
-    buf: RefCell<Vec<Option<(String, String)>>>,
-    w: usize,
-    h: usize,
+    buf: RefCell<Array2<(Style, char)>>,
     cursor_pos: (usize, usize),
     cursor_visible: bool,
+    default_style: Style,
 }
 
 impl Screen {
-    pub fn new() -> Self {
+    pub fn with_default_style(default_style: Style) -> Self {
         let (w, h) = termion::terminal_size().unwrap();
-        let buf = std::iter::repeat(Some(("".into(), " ".into())))
-            .take(w as usize * h as usize)
-            .collect();
+        let buf =
+            Array::from_iter(std::iter::repeat((default_style, ' ')).take(w as usize * h as usize));
+        let buf = buf.into_shape((h as usize, w as usize)).unwrap();
         Screen {
             out: RefCell::new(MouseTerminal::from(AlternateScreen::from(
                 BufWriter::with_capacity(1 << 14, io::stdout())
@@ -35,41 +33,16 @@ impl Screen {
                     .unwrap(),
             ))),
             buf: RefCell::new(buf),
-            w: w as usize,
-            h: h as usize,
             cursor_pos: (0, 0),
             cursor_visible: true,
+            default_style,
         }
     }
 
-    pub fn clear<C>(&self, col: &C)
-    where
-        C: Color + Clone,
-    {
+    pub fn clear(&self) {
         for cell in self.buf.borrow_mut().iter_mut() {
-            match *cell {
-                Some((ref mut style, ref mut text)) => {
-                    *style = format!("{}{}", color::Fg(col.clone()), color::Bg(col.clone()));
-                    text.clear();
-                    text.push_str(" ");
-                }
-                _ => {
-                    *cell = Some((
-                        format!("{}{}", color::Fg(col.clone()), color::Bg(col.clone())),
-                        " ".into(),
-                    ));
-                }
-            }
+            *cell = (self.default_style, ' ');
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn resize(&mut self, w: usize, h: usize) {
-        self.w = w;
-        self.h = h;
-        self.buf
-            .borrow_mut()
-            .resize(w * h, Some(("".into(), " ".into())));
     }
 
     pub fn present(&self) {
@@ -77,24 +50,19 @@ impl Screen {
         let buf = self.buf.borrow();
 
         write!(out, "{}", termion::cursor::Hide).unwrap();
-        let mut last_style = "";
-        write!(out, "{}", last_style).unwrap();
+        let mut last_style = self.default_style;
+        write!(out, "{}", Self::escape_style(&last_style)).unwrap();
 
-        // Write everything to the tmp_string first.
-        for y in 0..self.h {
-            let mut x = 0;
-            write!(out, "{}", termion::cursor::Goto(1, y as u16 + 1)).unwrap();
-            while x < self.w {
-                if let Some((ref style, ref text)) = buf[y * self.w + x] {
-                    if style != last_style {
-                        write!(out, "{}{}", style::Reset, style).unwrap();
-                        last_style = style;
-                    }
-                    write!(out, "{}", text).unwrap();
-                    x += 1;
-                } else {
-                    x += 1;
+        let (h, w) = buf.dim();
+        for y in 0..h {
+            write!(out, "{}", termion::cursor::Goto(1, 1 + y as u16)).unwrap();
+            for x in 0..w {
+                let (style, ref text) = buf[[y, x]];
+                if style != last_style {
+                    write!(out, "{}{}", style::Reset, Self::escape_style(&style)).unwrap();
+                    last_style = style;
                 }
+                write!(out, "{}", text).unwrap();
             }
         }
 
@@ -112,27 +80,23 @@ impl Screen {
         out.flush().unwrap();
     }
     pub fn draw(&self, x: usize, y: usize, text: &str) {
-        self.draw_with_style(x, y, text, "");
+        self.draw_with_style(x, y, self.default_style, text);
     }
 
-    pub fn draw_with_style(&self, x: usize, y: usize, text: &str, style: &str) {
-        if y < self.h {
-            let mut buf = self.buf.borrow_mut();
-            let mut x = x;
-            for g in UnicodeSegmentation::graphemes(text, true) {
-                let width = UnicodeWidthStr::width(g);
-                if width > 0 {
-                    if x < self.w {
-                        buf[y * self.w + x] = Some((style.to_string(), g.into()));
-                    }
-                    x += 1;
-                    for _ in 0..(width - 1) {
-                        if x < self.w {
-                            buf[y * self.w + x] = None;
-                        }
-                        x += 1;
-                    }
-                }
+    pub fn draw_with_style(&self, x: usize, y: usize, style: Style, text: &str) {
+        self.draw_ranges(x, y, vec![(style, text)]);
+    }
+
+    pub fn draw_ranges(&self, x: usize, y: usize, ranges: Vec<(Style, &str)>) {
+        let mut buf = self.buf.borrow_mut();
+        let (h, w) = buf.dim();
+        assert!(y < h);
+        let mut x = x;
+        for (style, text) in ranges {
+            for g in text.chars() {
+                assert!(x < w);
+                buf[[y, x]] = (style, g);
+                x += 1;
             }
         }
     }
@@ -147,6 +111,21 @@ impl Screen {
 
     pub fn move_cursor(&mut self, x: usize, y: usize) {
         self.cursor_pos = (x, y);
+    }
+
+    fn escape_style(style: &Style) -> String {
+        let mut s = String::new();
+        write!(
+            s,
+            "\x1b[48;2;{};{};{}m",
+            style.background.r, style.background.g, style.background.b
+        ).unwrap();
+        write!(
+            s,
+            "\x1b[38;2;{};{};{}m",
+            style.foreground.r, style.foreground.g, style.foreground.b
+        );
+        s
     }
 }
 
