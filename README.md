@@ -31,5 +31,5 @@ With more planned such as user configurations, search & replace, persistent undo
 Here's what it looks like editing its own source code:
 
 <h2 align="center">
-  <img  src="img/screenshot.png" alt="Smith in action" width="641" height="396"/>
+  <img  src="img/screenshot.png" alt="Smith in action"/>
 </h2>
