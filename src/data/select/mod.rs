@@ -13,7 +13,6 @@ pub trait Selectable {
             None => false,
         }
     }
-    fn line_in_sel(&self, line: usize) -> bool;
 }
 
 pub struct Select<T>
@@ -47,10 +46,6 @@ where
 
     fn reset_sel(&mut self) {
         self.sel = None;
-    }
-
-    fn line_in_sel(&self, line: usize) -> bool {
-        self.in_sel(self.line_index_to_char_index(line))
     }
 }
 

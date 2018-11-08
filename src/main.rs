@@ -18,7 +18,6 @@ use command::State;
 use data::{Recorded, Select, Text};
 use std::env;
 use std::io::stdin;
-use std::path::Path;
 use syntect::dumps::from_binary;
 use syntect::highlighting::Theme;
 use syntect::parsing::SyntaxSet;

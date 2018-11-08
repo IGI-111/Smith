@@ -223,37 +223,55 @@ impl<'a> View<'a> {
             let ranges: Vec<(Style, &str)> = self.highlighter.highlight(&line_str, self.syntax_set);
             self.screen.draw_ranges(line_start, y, ranges);
 
-            // if line.len_chars() > 1 {
-            //     let line_start_char_index = content.line_index_to_char_index(line_index);
-            //     for (x, c) in line
-            //         .chars()
-            //         .flat_map(|c| {
-            //             if c == '\t' {
-            //                 iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
-            //             } else {
-            //                 iter::repeat(c).take(1)
-            //             }
-            //         }).enumerate()
-            //     {
-            //         let char_index = line_start_char_index + x;
+            // draw selection over
+            if let Some((selbeg, selend)) = content.sel() {
+                let selection_style = Style {
+                    foreground: self
+                        .theme
+                        .settings
+                        .selection_foreground
+                        .unwrap_or(Color::WHITE),
+                    background: self.theme.settings.selection.unwrap_or(Color::BLACK),
+                    font_style: FontStyle::empty(),
+                };
+                let beg = content.line_index_to_char_index(line_index);
+                let end = beg + line_str.len();
 
-            //         if x < lines_width {
-            //             if content.in_sel(char_index) {
-            //                 self.screen.draw_with_style(
-            //                     x + line_start,
-            //                     y,
-            //                     &format!("{}", c),
-            //                     &format!("{}", style::Invert),
-            //                 );
-            //             } else {
-            //                 self.screen.draw(x + line_start, y, &format!("{}", c));
-            //             }
-            //         }
-            //     }
-            // } else if content.line_in_sel(line_offset + y) {
-            //     self.screen
-            //         .draw_with_style(line_start, y, " ", &format!("{}", style::Invert));
-            // }
+                if *selbeg <= beg && *selend >= end {
+                    // line is fully inside the selection
+                    if line_str.is_empty() {
+                        self.screen
+                            .draw_with_style(line_start, y, selection_style, " ");
+                    } else {
+                        self.screen
+                            .draw_with_style(line_start, y, selection_style, &line_str);
+                    }
+                } else if *selbeg >= beg && *selbeg <= end && *selend <= end && *selend >= beg {
+                    // selection is inside the line
+                    self.screen.draw_with_style(
+                        line_start + (*selbeg - beg),
+                        y,
+                        selection_style,
+                        &line_str[(*selbeg - beg)..=(*selend - beg)],
+                    );
+                } else if *selbeg <= end && *selbeg >= beg {
+                    // line contains the beginning of the selection
+                    self.screen.draw_with_style(
+                        line_start + (*selbeg - beg),
+                        y,
+                        selection_style,
+                        &line_str[(*selbeg - beg)..],
+                    );
+                } else if *selend <= end && *selend >= beg {
+                    // line contains the end of the selection
+                    self.screen.draw_with_style(
+                        line_start,
+                        y,
+                        selection_style,
+                        &line_str[..=(*selend - beg)],
+                    );
+                }
+            }
         }
     }
 
