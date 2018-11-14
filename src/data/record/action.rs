@@ -1,4 +1,5 @@
 use super::super::Editable;
+use std::mem;
 
 #[derive(Clone, Debug)]
 pub enum Action {
@@ -7,48 +8,6 @@ pub enum Action {
     Delete(String),
     Move(isize),
     DeleteForward(String),
-}
-
-impl PartialEq for Action {
-    fn eq(&self, other: &Action) -> bool {
-        match *self {
-            Action::Insert(_) => {
-                if let Action::Insert(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::InsertForward(_) => {
-                if let Action::InsertForward(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::DeleteForward(_) => {
-                if let Action::DeleteForward(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::Delete(_) => {
-                if let Action::Delete(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-            Action::Move(_) => {
-                if let Action::Move(_) = *other {
-                    true
-                } else {
-                    false
-                }
-            }
-        }
-    }
 }
 
 impl Action {
@@ -92,7 +51,7 @@ impl Action {
     }
 
     pub fn join(&mut self, act: Action) {
-        assert_eq!(act, *self);
+        assert!(self.same_variant(&act));
         match *self {
             Action::Insert(ref mut s) => {
                 let act_string = match act {
@@ -132,5 +91,9 @@ impl Action {
                 *rel += act_rel;
             }
         }
+    }
+
+    pub fn same_variant(&self, other: &Action) -> bool {
+        mem::discriminant(self) == mem::discriminant(other)
     }
 }

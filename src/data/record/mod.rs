@@ -39,7 +39,7 @@ where
     fn record(&mut self, act: Action) {
         self.undone.clear(); // we are branching to a new sequence of events
         if let Some(a) = self.history.front_mut() {
-            if *a == act {
+            if a.same_variant(&act) {
                 // join similar actions together
                 a.join(act);
                 return;
