@@ -1,4 +1,5 @@
 use super::super::Editable;
+use std::mem;
 
 #[derive(Clone, Debug)]
 pub enum Action {
@@ -93,13 +94,6 @@ impl Action {
     }
 
     pub fn same_variant(&self, other: &Action) -> bool {
-        match (self, other) {
-            (Action::Insert(_), Action::Insert(_)) => true,
-            (Action::InsertForward(_), Action::InsertForward(_)) => true,
-            (Action::DeleteForward(_), Action::DeleteForward(_)) => true,
-            (Action::Delete(_), Action::Delete(_)) => true,
-            (Action::Move(_), Action::Move(_)) => true,
-            _ => false,
-        }
+        mem::discriminant(self) == mem::discriminant(other)
     }
 }
