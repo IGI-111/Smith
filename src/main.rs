@@ -72,10 +72,10 @@ fn build_text(filename: &Option<String>) -> Select<Recorded<Text>> {
 
 fn build_view<'a>(filename: &Option<String>, ps: &'a SyntaxSet, theme: &'a Theme) -> View<'a> {
     let syntax = match filename {
-        Some(filename) => ps
-            .find_syntax_for_file(filename)
-            .unwrap()
-            .unwrap_or_else(|| ps.find_syntax_plain_text()),
+        Some(filename) => match ps.find_syntax_for_file(filename) {
+            Ok(Some(syn)) => syn,
+            _ => ps.find_syntax_plain_text(),
+        },
         None => ps.find_syntax_plain_text(),
     };
 
