@@ -1,7 +1,7 @@
 mod screen;
 
 use self::screen::Screen;
-use data::{Editable, Named, Selectable};
+use data::{Editable, Named, Selectable, Undoable};
 use std::{cmp, iter};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Theme;
@@ -77,7 +77,7 @@ impl<'a> View<'a> {
 
     pub fn render<T>(&mut self, content: &T)
     where
-        T: Editable + Named + Selectable,
+        T: Editable + Named + Selectable + Undoable,
     {
         self.screen.clear();
         self.paint_lines(content);
@@ -148,7 +148,7 @@ impl<'a> View<'a> {
 
     fn paint_status<T>(&self, content: &T)
     where
-        T: Editable + Named,
+        T: Editable + Named + Undoable,
     {
         let line = content.line();
         let column = content.col();
@@ -166,7 +166,11 @@ impl<'a> View<'a> {
         };
 
         self.screen.draw_with_style(0, y, style, &empty_line);
-        self.screen.draw_with_style(0, y, style, content.name());
+        let mut filename = content.name().clone();
+        if !content.no_changes_since_save() {
+            filename.push_str(" *");
+        }
+        self.screen.draw_with_style(0, y, style, &filename);
 
         let position_info = format!("{}% {}/{}: {}", advance, line + 1, line_count, column);
         let x = screen_width as usize - position_info.len();
