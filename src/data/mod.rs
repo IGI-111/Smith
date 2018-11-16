@@ -38,7 +38,7 @@ pub trait Named {
 }
 
 pub trait Saveable: Named {
-    fn save(&self) -> Result<()>;
+    fn save(&mut self) -> Result<()>;
 }
 
 #[derive(Clone)]

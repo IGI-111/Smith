@@ -7,9 +7,9 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub struct Text {
-    pub pos: usize,
-    pub text: Rope,
-    pub name: String,
+    pos: usize,
+    text: Rope,
+    name: String,
 }
 
 impl Text {
@@ -48,7 +48,7 @@ impl Text {
 }
 
 impl Saveable for Text {
-    fn save(&self) -> Result<()> {
+    fn save(&mut self) -> Result<()> {
         if self.name.is_empty() {
             return Err(Error::new(
                 ErrorKind::InvalidInput,

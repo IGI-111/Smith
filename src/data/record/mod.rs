@@ -14,15 +14,18 @@ const UNDO_SIZE: usize = usize::MAX;
 pub trait Undoable {
     fn undo(&mut self);
     fn redo(&mut self);
+    fn history_len(&self) -> usize;
+    fn no_changes_since_save(&self) -> bool;
 }
 
 pub struct Recorded<T>
 where
     T: Editable,
 {
-    pub content: T,
-    pub history: VecDeque<Action>,
-    pub undone: VecDeque<Action>,
+    content: T,
+    history: VecDeque<Action>,
+    history_saved_at: usize,
+    undone: VecDeque<Action>,
 }
 
 impl<T> Recorded<T>
@@ -34,6 +37,7 @@ where
             content,
             history: VecDeque::new(),
             undone: VecDeque::new(),
+            history_saved_at: 0,
         }
     }
     fn record(&mut self, act: Action) {
@@ -74,6 +78,12 @@ where
         };
         to_redo.apply(&mut self.content);
         self.history.push_front(to_redo);
+    }
+    fn history_len(&self) -> usize {
+        self.history.len()
+    }
+    fn no_changes_since_save(&self) -> bool {
+        self.history_saved_at == self.history_len()
     }
 }
 
@@ -155,10 +165,9 @@ impl<T> Saveable for Recorded<T>
 where
     T: Editable + Saveable,
 {
-    delegate! {
-        target self.content {
-            fn save(&self) -> Result<()>;
-        }
+    fn save(&mut self) -> Result<()> {
+        self.history_saved_at = self.history_len();
+        self.content.save()
     }
 }
 

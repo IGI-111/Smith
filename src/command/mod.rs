@@ -8,9 +8,15 @@ use view::View;
 pub enum State {
     Insert,
     Message,
-    Prompt(String, String),
+    Prompt(String, String, PromptAction),
     Select(usize),
     Selected,
+}
+
+#[derive(Debug, Clone)]
+pub enum PromptAction {
+    Save,
+    ConfirmExit,
 }
 
 const SCROLL_FACTOR: usize = 2;
@@ -22,8 +28,8 @@ impl State {
         T: Editable + Saveable + Undoable + Selectable,
     {
         match self {
-            State::Prompt(prompt, message) => {
-                State::handle_prompt(content, view, event, prompt, message)
+            State::Prompt(prompt, message, action) => {
+                State::handle_prompt(content, view, event, prompt, message, action)
             }
             State::Select(origin) => State::handle_select(content, view, event, origin),
             State::Insert => State::handle_insert(content, view, event),
@@ -45,12 +51,21 @@ impl State {
         T: Editable + Named + Undoable,
     {
         match event {
-            Event::Key(Key::Ctrl('q')) | Event::Key(Key::Esc) => return None,
+            Event::Key(Key::Ctrl('q')) | Event::Key(Key::Esc) => {
+                if content.no_changes_since_save() {
+                    return None;
+                } else {
+                    let prompt = "Changes not saved do you really want to exit (y/N): ".to_string();
+                    let message = "".to_string();
+                    view.prompt(&prompt, &message);
+                    return Some(State::Prompt(prompt, message, PromptAction::ConfirmExit));
+                }
+            }
             Event::Key(Key::Ctrl('s')) => {
                 let prompt = "Save to: ".to_string();
                 let message = content.name().to_string();
                 view.prompt(&prompt, &message);
-                return Some(State::Prompt(prompt, message));
+                return Some(State::Prompt(prompt, message, PromptAction::Save));
             }
             Event::Mouse(MouseEvent::Press(MouseButton::Left, x, y)) => {
                 let (line, col) = view.translate_coordinates(content, x, y);
@@ -135,41 +150,52 @@ impl State {
         event: Event,
         prompt: String,
         mut message: String,
+        action: PromptAction,
     ) -> Option<Self>
     where
         T: Editable + Saveable,
     {
         match event {
-            Event::Key(Key::Char('\n')) => {
-                let msg: String;
-                let old_name = content.name().clone();
-                content.set_name(message);
-                msg = match content.save() {
-                    Err(e) => {
-                        content.set_name(old_name);
-                        e.to_string()
+            Event::Key(Key::Char('\n')) => match action {
+                PromptAction::Save => {
+                    let msg: String;
+                    let old_name = content.name().clone();
+                    content.set_name(message);
+                    msg = match content.save() {
+                        Err(e) => {
+                            content.set_name(old_name);
+                            e.to_string()
+                        }
+                        Ok(_) => format!("Saved file {}", content.name()),
+                    };
+                    view.message(&msg);
+                    Some(State::Message)
+                }
+                PromptAction::ConfirmExit => {
+                    if message.to_lowercase() == "y" {
+                        None
+                    } else {
+                        view.message("");
+                        Some(State::Message)
                     }
-                    Ok(_) => format!("Saved file {}", content.name()),
-                };
-                view.message(&msg);
-                Some(State::Message)
-            }
+                }
+            },
             Event::Key(Key::Char(c)) => {
                 message.push(c);
                 view.prompt(&prompt, &message);
-                Some(State::Prompt(prompt, message))
+                Some(State::Prompt(prompt, message, action))
             }
             Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
                 message.pop();
                 view.prompt(&prompt, &message);
-                Some(State::Prompt(prompt, message))
+                Some(State::Prompt(prompt, message, action))
             }
             Event::Key(Key::Ctrl('q')) => None,
             Event::Key(Key::Esc) => {
                 view.quiet();
                 Some(State::Insert)
             }
-            _ => Some(State::Prompt(prompt, message)),
+            _ => Some(State::Prompt(prompt, message, action)),
         }
     }
 

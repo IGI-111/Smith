@@ -19,8 +19,8 @@ pub struct Select<T>
 where
     T: Editable,
 {
-    pub content: T,
-    pub sel: Option<Selection>,
+    content: T,
+    sel: Option<Selection>,
 }
 
 impl<T> Select<T>
@@ -81,7 +81,7 @@ where
 {
     delegate! {
         target self.content {
-            fn save(&self) -> Result<()>;
+            fn save(&mut self) -> Result<()>;
         }
     }
 }
@@ -106,6 +106,8 @@ where
         target self.content {
             fn undo(&mut self) -> ();
             fn redo(&mut self) -> ();
+            fn history_len(&self) -> usize;
+            fn no_changes_since_save(&self) -> bool;
         }
     }
 }
