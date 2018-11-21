@@ -13,15 +13,19 @@ pub struct View<'a> {
     is_prompt: bool,
     line_offset: usize,
     screen: Screen,
-    highlighter: HighlightLines<'a>,
     theme: &'a Theme,
     syntax_set: &'a SyntaxSet,
+    syntax_ref: &'a SyntaxReference,
 }
 
 const TAB_LENGTH: usize = 4;
 
 impl<'a> View<'a> {
-    pub fn new(theme: &'a Theme, syntax: &'a SyntaxReference, syntax_set: &'a SyntaxSet) -> Self {
+    pub fn new(
+        theme: &'a Theme,
+        syntax_ref: &'a SyntaxReference,
+        syntax_set: &'a SyntaxSet,
+    ) -> Self {
         let default_style = Style {
             foreground: theme.settings.foreground.unwrap_or(Color::WHITE),
             background: theme.settings.background.unwrap_or(Color::BLACK),
@@ -32,9 +36,9 @@ impl<'a> View<'a> {
             is_prompt: false,
             line_offset: 0,
             screen: Screen::with_default_style(default_style),
-            highlighter: HighlightLines::new(syntax, theme),
             theme,
             syntax_set,
+            syntax_ref,
         }
     }
 
@@ -187,12 +191,29 @@ impl<'a> View<'a> {
 
         let line_start = self.line_number_width(line_count) as usize + 1;
 
-        for (y, line) in content
-            .lines()
-            .skip(line_offset)
-            .take(cmp::min(lines_height, line_count))
-            .enumerate()
-        {
+        let mut highlighter = HighlightLines::new(self.syntax_ref, self.theme);
+
+        for (i, line) in content.lines().enumerate() {
+            let mut line_str = line
+                .chars()
+                .flat_map(|c| {
+                    if c == '\t' {
+                        iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
+                    } else {
+                        iter::repeat(c).take(1)
+                    }
+                }).collect::<String>();
+            line_str.pop();
+
+            if i < line_offset {
+                continue;
+            }
+            let y = i - line_offset;
+            if y >= cmp::min(lines_height, line_count) {
+                break;
+            }
+            let ranges: Vec<(Style, &str)> = highlighter.highlight(&line_str, self.syntax_set);
+
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
             let line_number_style = Style {
@@ -213,18 +234,6 @@ impl<'a> View<'a> {
             self.screen
                 .draw_with_style(0, y, line_number_style, &format!("{}", 1 + line_index));
 
-            let mut line_str = line
-                .chars()
-                .flat_map(|c| {
-                    if c == '\t' {
-                        iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
-                    } else {
-                        iter::repeat(c).take(1)
-                    }
-                }).collect::<String>();
-            line_str.pop();
-
-            let ranges: Vec<(Style, &str)> = self.highlighter.highlight(&line_str, self.syntax_set);
             self.screen.draw_ranges(line_start, y, ranges);
 
             // draw selection over
