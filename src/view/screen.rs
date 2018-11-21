@@ -90,11 +90,15 @@ impl Screen {
     pub fn draw_ranges(&self, x: usize, y: usize, ranges: Vec<(Style, &str)>) {
         let mut buf = self.buf.borrow_mut();
         let (h, w) = buf.dim();
-        assert!(y < h);
+        if y >= h {
+            return;
+        }
         let mut x = x;
         for (style, text) in ranges {
             for g in text.chars() {
-                assert!(x < w);
+                if x >= w {
+                    break;
+                }
                 buf[[y, x]] = (style, g);
                 x += 1;
             }
