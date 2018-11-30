@@ -1,5 +1,5 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
-use data::{Editable, Movement, Named, Saveable, Selectable, Undoable};
+use data::{Editable, Modifiable, Movement, Named, Saveable, Selectable, Undoable};
 use std::cmp;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use view::View;
@@ -25,7 +25,7 @@ impl State {
     // Handles a Termion event, consuming the current state and returning the new state
     pub fn handle<T>(self, content: &mut T, view: &mut View, event: Event) -> Option<Self>
     where
-        T: Editable + Saveable + Undoable + Selectable,
+        T: Editable + Saveable + Undoable + Selectable + Modifiable,
     {
         match self {
             State::Prompt(prompt, message, action) => {
@@ -40,7 +40,7 @@ impl State {
 
     fn handle_message<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
     where
-        T: Editable + Named + Undoable,
+        T: Editable + Named + Undoable + Modifiable,
     {
         view.quiet();
         Self::handle_insert(content, view, event)
@@ -48,17 +48,17 @@ impl State {
 
     fn handle_insert<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
     where
-        T: Editable + Named + Undoable,
+        T: Editable + Named + Undoable + Modifiable,
     {
         match event {
             Event::Key(Key::Ctrl('q')) | Event::Key(Key::Esc) => {
-                if content.no_changes_since_save() {
-                    return None;
-                } else {
+                if content.was_modified() {
                     let prompt = "Changes not saved do you really want to exit (y/N): ".to_string();
                     let message = "".to_string();
                     view.prompt(&prompt, &message);
                     return Some(State::Prompt(prompt, message, PromptAction::ConfirmExit));
+                } else {
+                    return None;
                 }
             }
             Event::Key(Key::Ctrl('s')) => {
@@ -201,7 +201,7 @@ impl State {
 
     fn handle_selected<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
     where
-        T: Selectable + Editable + Named + Undoable,
+        T: Selectable + Editable + Named + Undoable + Modifiable,
     {
         match event {
             Event::Key(Key::Ctrl('c')) => {

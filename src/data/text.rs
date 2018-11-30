@@ -1,4 +1,4 @@
-use super::{CharIter, Editable, LineIter, Movement, Named, Saveable};
+use super::{CharIter, Editable, LineIter, Modifiable, Movement, Named, Saveable};
 use ropey::Rope;
 use std::cmp;
 use std::fs::File;
@@ -10,6 +10,7 @@ pub struct Text {
     pos: usize,
     text: Rope,
     name: String,
+    modified: bool,
 }
 
 impl Text {
@@ -18,6 +19,7 @@ impl Text {
             pos: 0,
             text: Rope::from_str("\n"),
             name: String::new(),
+            modified: false,
         }
     }
     pub fn open_file(filename: String) -> Result<Text> {
@@ -38,6 +40,7 @@ impl Text {
                 pos: 0,
                 text,
                 name: filename,
+                modified: false,
             })
         } else {
             let mut text = Text::empty();
@@ -60,6 +63,7 @@ impl Saveable for Text {
             write!(file, "{}", chunk)?;
         }
         file.sync_all()?;
+        self.modified = false;
         Ok(())
     }
 }
@@ -70,6 +74,12 @@ impl Named for Text {
     }
     fn set_name(&mut self, name: String) {
         self.name = name;
+    }
+}
+
+impl Modifiable for Text {
+    fn was_modified(&self) -> bool {
+        self.modified
     }
 }
 
@@ -132,14 +142,17 @@ impl Editable for Text {
     }
 
     fn insert(&mut self, c: char) {
+        self.modified = true;
         self.text.insert(self.pos, &format!("{}", c));
         self.pos += 1;
     }
     fn insert_forward(&mut self, c: char) {
+        self.modified = true;
         self.text.insert(self.pos, &format!("{}", c));
     }
 
     fn delete(&mut self) -> Option<char> {
+        self.modified = true;
         if self.pos == 0 {
             None
         } else {
@@ -151,6 +164,7 @@ impl Editable for Text {
     }
 
     fn delete_forward(&mut self) -> Option<char> {
+        self.modified = true;
         if self.pos < self.len() - 1 {
             let ch = self.text.char(self.pos);
             self.text.remove(self.pos..=self.pos);

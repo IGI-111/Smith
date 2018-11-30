@@ -1,4 +1,4 @@
-use super::{CharIter, Editable, LineIter, Movement, Named, Saveable, Undoable};
+use super::{CharIter, Editable, LineIter, Modifiable, Movement, Named, Saveable, Undoable};
 use std::io::Result;
 
 pub type Selection = (usize, usize);
@@ -107,7 +107,17 @@ where
             fn undo(&mut self) -> ();
             fn redo(&mut self) -> ();
             fn history_len(&self) -> usize;
-            fn no_changes_since_save(&self) -> bool;
+        }
+    }
+}
+
+impl<T> Modifiable for Select<T>
+where
+    T: Editable + Modifiable,
+{
+    delegate! {
+        target self.content {
+            fn was_modified(&self) -> bool;
         }
     }
 }

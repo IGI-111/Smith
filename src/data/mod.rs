@@ -41,6 +41,10 @@ pub trait Saveable: Named {
     fn save(&mut self) -> Result<()>;
 }
 
+pub trait Modifiable: Editable {
+    fn was_modified(&self) -> bool;
+}
+
 #[derive(Clone)]
 pub enum Movement {
     Up,

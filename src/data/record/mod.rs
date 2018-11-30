@@ -3,7 +3,7 @@
 mod action;
 
 use self::action::Action;
-use super::{CharIter, Editable, LineIter, Movement, Named, Saveable};
+use super::{CharIter, Editable, LineIter, Modifiable, Movement, Named, Saveable};
 use std::collections::VecDeque;
 use std::io::Result;
 use std::usize;
@@ -15,7 +15,6 @@ pub trait Undoable {
     fn undo(&mut self);
     fn redo(&mut self);
     fn history_len(&self) -> usize;
-    fn no_changes_since_save(&self) -> bool;
 }
 
 pub struct Recorded<T>
@@ -24,7 +23,6 @@ where
 {
     content: T,
     history: VecDeque<Action>,
-    history_saved_at: usize,
     undone: VecDeque<Action>,
 }
 
@@ -37,7 +35,6 @@ where
             content,
             history: VecDeque::new(),
             undone: VecDeque::new(),
-            history_saved_at: 0,
         }
     }
     fn record(&mut self, act: Action) {
@@ -81,9 +78,6 @@ where
     }
     fn history_len(&self) -> usize {
         self.history.len()
-    }
-    fn no_changes_since_save(&self) -> bool {
-        self.history_saved_at == self.history_len()
     }
 }
 
@@ -166,7 +160,6 @@ where
     T: Editable + Saveable,
 {
     fn save(&mut self) -> Result<()> {
-        self.history_saved_at = self.history_len();
         self.content.save()
     }
 }
@@ -179,6 +172,17 @@ where
         target self.content {
             fn name(&self) -> &String;
             fn set_name(&mut self, name: String) -> ();
+        }
+    }
+}
+
+impl<T> Modifiable for Recorded<T>
+where
+    T: Editable + Modifiable,
+{
+    delegate! {
+        target self.content {
+            fn was_modified(&self) -> bool;
         }
     }
 }
