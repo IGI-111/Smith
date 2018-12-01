@@ -51,8 +51,17 @@ fn edit_file(filename: &Option<String>) {
     loop {
         if let Some(event) = events.next() {
             state = match state.handle(&mut text, &mut view, event.unwrap()) {
-                Some(state) => state,
-                None => break,
+                State::Exit => break,
+                State::Open(new_filename) => {
+                    // we must close the terminal modes before resetting them
+                    drop(text);
+                    drop(view);
+                    text = build_text(&Some(new_filename.clone()));
+                    view = build_view(&Some(new_filename.clone()), &ps, &ts);
+                    view.message(&format!("Opened {}", new_filename));
+                    State::Insert
+                },
+                state => state,
             }
         }
 

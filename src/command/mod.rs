@@ -1,5 +1,5 @@
 use clipboard::{ClipboardContext, ClipboardProvider};
-use data::{Editable, Modifiable, Movement, Named, Saveable, Selectable, Undoable};
+use data::*;
 use std::cmp;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use view::View;
@@ -11,19 +11,23 @@ pub enum State {
     Prompt(String, String, PromptAction),
     Select(usize),
     Selected,
+    Open(String),
+    Exit,
 }
 
 #[derive(Debug, Clone)]
 pub enum PromptAction {
     Save,
     ConfirmExit,
+    Open,
+    ConfirmOpen(String),
 }
 
 const SCROLL_FACTOR: usize = 2;
 
 impl State {
     // Handles a Termion event, consuming the current state and returning the new state
-    pub fn handle<T>(self, content: &mut T, view: &mut View, event: Event) -> Option<Self>
+    pub fn handle<T>(self, content: &mut T, view: &mut View, event: Event) -> Self
     where
         T: Editable + Saveable + Undoable + Selectable + Modifiable,
     {
@@ -35,20 +39,21 @@ impl State {
             State::Insert => State::handle_insert(content, view, event),
             State::Message => State::handle_message(content, view, event),
             State::Selected => State::handle_selected(content, view, event),
+            State::Open(_) | State::Exit => panic!("Can't handle exit state"),
         }
     }
 
-    fn handle_message<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
+    fn handle_message<T>(content: &mut T, view: &mut View, event: Event) -> Self
     where
-        T: Editable + Named + Undoable + Modifiable,
+        T: Editable + Named + Undoable + Modifiable + Saveable,
     {
         view.quiet();
         Self::handle_insert(content, view, event)
     }
 
-    fn handle_insert<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
+    fn handle_insert<T>(content: &mut T, view: &mut View, event: Event) -> Self
     where
-        T: Editable + Named + Undoable + Modifiable,
+        T: Editable + Named + Undoable + Modifiable + Saveable,
     {
         match event {
             Event::Key(Key::Ctrl('q')) | Event::Key(Key::Esc) => {
@@ -56,21 +61,35 @@ impl State {
                     let prompt = "Changes not saved do you really want to exit (y/N): ".to_string();
                     let message = "".to_string();
                     view.prompt(&prompt, &message);
-                    return Some(State::Prompt(prompt, message, PromptAction::ConfirmExit));
+                    return State::Prompt(prompt, message, PromptAction::ConfirmExit);
                 } else {
-                    return None;
+                    return State::Exit;
                 }
             }
             Event::Key(Key::Ctrl('s')) => {
-                let prompt = "Save to: ".to_string();
-                let message = content.name().to_string();
+                if content.name().is_empty() {
+                    let prompt = "Save to: ".to_string();
+                    view.prompt(&prompt, "");
+                    return State::Prompt(prompt, "".to_string(), PromptAction::Save);
+                } else {
+                    let msg = match content.save() {
+                        Err(e) => e.to_string(),
+                        Ok(_) => format!("Saved file {}", content.name()),
+                    };
+                    view.message(&msg);
+                    return State::Message;
+                }
+            }
+            Event::Key(Key::Ctrl('o')) => {
+                let prompt = "Open file: ".to_string();
+                let message = "".to_string();
                 view.prompt(&prompt, &message);
-                return Some(State::Prompt(prompt, message, PromptAction::Save));
+                return State::Prompt(prompt, message, PromptAction::Open);
             }
             Event::Mouse(MouseEvent::Press(MouseButton::Left, x, y)) => {
                 let (line, col) = view.translate_coordinates(content, x, y);
                 content.move_at(line, col);
-                return Some(State::Select(content.pos()));
+                return State::Select(content.pos());
             }
             Event::Mouse(MouseEvent::Press(MouseButton::WheelDown, _, _)) => {
                 view.scroll_view(SCROLL_FACTOR as isize, content);
@@ -141,7 +160,7 @@ impl State {
             }
             _ => {}
         }
-        Some(State::Insert)
+        State::Insert
     }
 
     fn handle_prompt<T>(
@@ -151,57 +170,76 @@ impl State {
         prompt: String,
         mut message: String,
         action: PromptAction,
-    ) -> Option<Self>
+    ) -> Self
     where
-        T: Editable + Saveable,
+        T: Editable + Saveable + Modifiable,
     {
         match event {
             Event::Key(Key::Char('\n')) => match action {
                 PromptAction::Save => {
                     let msg: String;
                     let old_name = content.name().clone();
-                    content.set_name(message);
+                    content.set_name(message.clone());
                     msg = match content.save() {
                         Err(e) => {
                             content.set_name(old_name);
                             e.to_string()
                         }
-                        Ok(_) => format!("Saved file {}", content.name()),
+                        Ok(_) => format!("Saved file {}", message),
                     };
                     view.message(&msg);
-                    Some(State::Message)
+                    State::Message
                 }
                 PromptAction::ConfirmExit => {
                     if message.to_lowercase() == "y" {
-                        None
+                        State::Exit
                     } else {
                         view.message("");
-                        Some(State::Message)
+                        State::Message
+                    }
+                }
+                PromptAction::Open =>  {
+                    let filename = message;
+                    if content.was_modified() {
+                        let prompt = "Changes not saved do you really want to open a new file (y/N): ".to_string();
+                        let message = "".to_string();
+                        view.prompt(&prompt, &message);
+                        State::Prompt(prompt, message, PromptAction::ConfirmOpen(filename))
+                    } else {
+                        State::Open(filename)
+                    }
+                }
+                PromptAction::ConfirmOpen(filename) => {
+                    if message.to_lowercase() == "y" {
+                        State::Open(filename)
+                    } else {
+                        view.message("");
+                        State::Message
                     }
                 }
             },
             Event::Key(Key::Char(c)) => {
                 message.push(c);
                 view.prompt(&prompt, &message);
-                Some(State::Prompt(prompt, message, action))
+                State::Prompt(prompt, message, action)
             }
             Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
                 message.pop();
                 view.prompt(&prompt, &message);
-                Some(State::Prompt(prompt, message, action))
+                State::Prompt(prompt, message, action)
             }
-            Event::Key(Key::Ctrl('q')) => None,
+            Event::Key(Key::Ctrl('q')) => State::Exit,
             Event::Key(Key::Esc) => {
                 view.quiet();
-                Some(State::Insert)
+                State::Insert
             }
-            _ => Some(State::Prompt(prompt, message, action)),
+            _ => State::Prompt(prompt, message, action),
         }
     }
 
-    fn handle_selected<T>(content: &mut T, view: &mut View, event: Event) -> Option<Self>
+    fn handle_selected<T>(content: &mut T, view: &mut View, event: Event) -> Self
     where
-        T: Selectable + Editable + Named + Undoable + Modifiable,
+        T: Selectable + Editable + Named + Undoable + Modifiable + Saveable,
     {
         match event {
             Event::Key(Key::Ctrl('c')) => {
@@ -212,7 +250,7 @@ impl State {
                 ctx.set_contents(selection).unwrap();
 
                 content.reset_sel();
-                Some(State::Insert)
+                State::Insert
             }
             Event::Key(Key::Ctrl('x')) => {
                 let (beg, end) = content.sel().unwrap();
@@ -225,13 +263,13 @@ impl State {
                 view.adjust_view(content.line());
 
                 content.reset_sel();
-                Some(State::Insert)
+                State::Insert
             }
             Event::Key(Key::Backspace) | Event::Key(Key::Delete) => {
                 delete_sel(content);
                 view.adjust_view(content.line());
                 content.reset_sel();
-                Some(State::Insert)
+                State::Insert
             }
             Event::Key(Key::Char(_)) => {
                 delete_sel(content);
@@ -251,7 +289,7 @@ impl State {
         view: &mut View,
         event: Event,
         origin: usize,
-    ) -> Option<Self>
+    ) -> Self
     where
         T: Editable + Selectable,
     {
@@ -264,7 +302,7 @@ impl State {
                     cmp::max(origin, content.pos()),
                 );
                 content.set_sel(sel);
-                Some(State::Select(origin))
+                State::Select(origin)
             }
             Event::Mouse(MouseEvent::Release(x, y)) => {
                 let (line, col) = view.translate_coordinates(content, x, y);
@@ -275,12 +313,12 @@ impl State {
                         cmp::max(origin, content.pos()),
                     );
                     content.set_sel(sel);
-                    Some(State::Selected)
+                    State::Selected
                 } else {
-                    Some(State::Insert)
+                    State::Insert
                 }
             }
-            _ => Some(State::Select(origin)),
+            _ => State::Select(origin),
         }
     }
 }

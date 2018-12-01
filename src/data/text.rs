@@ -45,6 +45,7 @@ impl Text {
         } else {
             let mut text = Text::empty();
             text.set_name(filename);
+            text.modified = true;
             Ok(text)
         }
     }
