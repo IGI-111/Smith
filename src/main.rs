@@ -60,7 +60,7 @@ fn edit_file(filename: &Option<String>) {
                     view = build_view(&Some(new_filename.clone()), &ps, &ts);
                     view.message(&format!("Opened {}", new_filename));
                     State::Insert
-                },
+                }
                 state => state,
             }
         }

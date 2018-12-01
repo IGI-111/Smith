@@ -198,10 +198,12 @@ impl State {
                         State::Message
                     }
                 }
-                PromptAction::Open =>  {
+                PromptAction::Open => {
                     let filename = message;
                     if content.was_modified() {
-                        let prompt = "Changes not saved do you really want to open a new file (y/N): ".to_string();
+                        let prompt =
+                            "Changes not saved do you really want to open a new file (y/N): "
+                                .to_string();
                         let message = "".to_string();
                         view.prompt(&prompt, &message);
                         State::Prompt(prompt, message, PromptAction::ConfirmOpen(filename))
@@ -284,12 +286,7 @@ impl State {
         }
     }
 
-    fn handle_select<T>(
-        content: &mut T,
-        view: &mut View,
-        event: Event,
-        origin: usize,
-    ) -> Self
+    fn handle_select<T>(content: &mut T, view: &mut View, event: Event, origin: usize) -> Self
     where
         T: Editable + Selectable,
     {
