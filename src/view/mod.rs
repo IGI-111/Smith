@@ -238,6 +238,7 @@ impl<'a> View<'a> {
 
             // draw selection over
             if let Some((selbeg, selend)) = content.sel() {
+                let line_str = String::new() + &line_str + " ";
                 let selection_style = Style {
                     foreground: self
                         .theme
@@ -248,7 +249,7 @@ impl<'a> View<'a> {
                     font_style: FontStyle::empty(),
                 };
                 let beg = content.line_index_to_char_index(line_index);
-                let end = beg + line_str.len();
+                let end = beg + line_str.len() - 1;
 
                 if *selbeg <= beg && *selend >= end {
                     // line is fully inside the selection
