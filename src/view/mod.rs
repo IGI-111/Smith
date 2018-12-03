@@ -199,11 +199,14 @@ impl<'a> View<'a> {
                 .flat_map(|c| {
                     if c == '\t' {
                         iter::repeat(' ').take(TAB_LENGTH) // FIXME: selection should consider tabs
+                    } else if c == '\n' {
+                        iter::repeat(' ').take(1)
                     } else {
                         iter::repeat(c).take(1)
                     }
                 }).collect::<String>();
-            line_str.pop();
+
+            let ranges: Vec<(Style, &str)> = highlighter.highlight(&line_str, self.syntax_set);
 
             if i < line_offset {
                 continue;
@@ -212,7 +215,6 @@ impl<'a> View<'a> {
             if y >= cmp::min(lines_height, line_count) {
                 break;
             }
-            let ranges: Vec<(Style, &str)> = highlighter.highlight(&line_str, self.syntax_set);
 
             // paint line number and initialize display for this line
             let line_index = line_offset + y;
@@ -238,7 +240,6 @@ impl<'a> View<'a> {
 
             // draw selection over
             if let Some((selbeg, selend)) = content.sel() {
-                let line_str = String::new() + &line_str + " ";
                 let selection_style = Style {
                     foreground: self
                         .theme
