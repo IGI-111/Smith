@@ -73,7 +73,8 @@ impl Screen {
                 "{}{}",
                 termion::cursor::Goto(1 + cx as u16, 1 + cy as u16),
                 termion::cursor::Show,
-            ).unwrap();
+            )
+            .unwrap();
         }
 
         // Make sure everything is written out
@@ -123,7 +124,8 @@ impl Screen {
             s,
             "\x1b[48;2;{};{};{}m",
             style.background.r, style.background.g, style.background.b
-        ).unwrap();
+        )
+        .unwrap();
         write!(
             s,
             "\x1b[38;2;{};{};{}m",
@@ -141,7 +143,8 @@ impl Drop for Screen {
             color::Fg(color::Reset),
             color::Bg(color::Reset),
             termion::clear::All,
-        ).unwrap();
+        )
+        .unwrap();
         self.show_cursor();
     }
 }

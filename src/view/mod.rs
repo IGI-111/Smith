@@ -109,7 +109,8 @@ impl<'a> View<'a> {
             .scan(0, |state, x| {
                 *state += if x == '\t' { TAB_LENGTH } else { 1 };
                 Some(*state)
-            }).take_while(|&x| x <= visual_col)
+            })
+            .take_while(|&x| x <= visual_col)
             .count();
         (line, col)
     }
@@ -204,7 +205,8 @@ impl<'a> View<'a> {
                     } else {
                         iter::repeat(c).take(1)
                     }
-                }).collect::<String>();
+                })
+                .collect::<String>();
 
             let ranges: Vec<(Style, &str)> = highlighter.highlight(&line_str, self.syntax_set);
 
