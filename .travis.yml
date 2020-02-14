@@ -6,7 +6,7 @@ rust:
   - nightly
 
 before_install:
-  - sudo apt-get install -qq xorg-dev
+  - sudo apt-get install -qq xorg-dev libxcb-render-util0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
 script:
   - cargo build --verbose
