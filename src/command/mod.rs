@@ -1,8 +1,8 @@
+use crate::data::*;
+use crate::view::View;
 use clipboard::{ClipboardContext, ClipboardProvider};
-use data::*;
 use std::cmp;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
-use view::View;
 
 #[derive(Debug, Clone)]
 pub enum State {

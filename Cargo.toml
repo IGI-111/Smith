@@ -6,6 +6,7 @@ description = "Smith is a simple terminal-based text editor written in Rust."
 repository = "https://github.com/IGI-111/Smith"
 keywords = [ "text", "editor", "terminal", "termion" ]
 license = "MIT"
+edition = "2018"
 
 [dependencies]
 clipboard = "0.5.0"

@@ -1,7 +1,7 @@
 mod screen;
 
 use self::screen::Screen;
-use data::{Editable, Modifiable, Named, Selectable, Undoable};
+use crate::data::{Editable, Modifiable, Named, Selectable, Undoable};
 use std::{cmp, iter};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::Theme;
