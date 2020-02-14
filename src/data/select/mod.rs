@@ -54,7 +54,7 @@ where
     T: Editable,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn step(&mut self, mov: Movement) -> ();
             fn move_to(&mut self, pos: usize) -> ();
             fn move_at(&mut self, line: usize, col: usize) -> ();
@@ -80,7 +80,7 @@ where
     T: Editable + Saveable,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn save(&mut self) -> Result<()>;
         }
     }
@@ -91,7 +91,7 @@ where
     T: Editable + Named,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn name(&self) -> &String;
             fn set_name(&mut self, name: String) -> ();
         }
@@ -103,7 +103,7 @@ where
     T: Editable + Undoable,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn undo(&mut self) -> ();
             fn redo(&mut self) -> ();
             fn history_len(&self) -> usize;
@@ -116,7 +116,7 @@ where
     T: Editable + Modifiable,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn was_modified(&self) -> bool;
         }
     }

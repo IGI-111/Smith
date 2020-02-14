@@ -195,7 +195,7 @@ impl<'a> View<'a> {
         let mut highlighter = HighlightLines::new(self.syntax_ref, self.theme);
 
         for (i, line) in content.lines().enumerate() {
-            let mut line_str = line
+            let line_str = line
                 .chars()
                 .flat_map(|c| {
                     if c == '\t' {

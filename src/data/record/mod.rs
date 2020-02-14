@@ -141,7 +141,7 @@ where
     }
 
     delegate! {
-        target self.content {
+        to self.content {
             fn pos(&self) -> usize;
             fn line(&self) -> usize;
             fn col(&self) -> usize;
@@ -169,7 +169,7 @@ where
     T: Editable + Named,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn name(&self) -> &String;
             fn set_name(&mut self, name: String) -> ();
         }
@@ -181,7 +181,7 @@ where
     T: Editable + Modifiable,
 {
     delegate! {
-        target self.content {
+        to self.content {
             fn was_modified(&self) -> bool;
         }
     }

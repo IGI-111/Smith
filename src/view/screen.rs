@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::fmt::Write as FmtWrite;
 use std::io;
 use std::io::{BufWriter, Write};
+use std::iter::FromIterator;
 use syntect::highlighting::Style;
 use termion;
 use termion::color;
@@ -130,7 +131,8 @@ impl Screen {
             s,
             "\x1b[38;2;{};{};{}m",
             style.foreground.r, style.foreground.g, style.foreground.b
-        );
+        )
+        .unwrap();
         s
     }
 }
