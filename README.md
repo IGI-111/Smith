@@ -16,6 +16,11 @@ Using Cargo:
 cargo install smith
 ```
 
+To compile Smith with clipboard support on Ubuntu, you may need to install some libraries:
+```
+sudo apt-get install -qq xorg-dev libxcb-render-util0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+```
+
 
 ## Features
 
