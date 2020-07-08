@@ -220,6 +220,7 @@ impl State {
                     }
                 }
             },
+            Event::Key(Key::Char('\t')) => State::Prompt(prompt, message, action), // TODO: autocompletion
             Event::Key(Key::Char(c)) => {
                 message.push(c);
                 view.prompt(&prompt, &message);
