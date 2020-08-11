@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate delegate;
-
 mod command;
 mod data;
 mod view;
