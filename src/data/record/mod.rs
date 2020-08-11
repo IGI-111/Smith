@@ -4,6 +4,7 @@ mod action;
 
 use self::action::Action;
 use super::{CharIter, Editable, LineIter, Modifiable, Movement, Named, Saveable};
+use delegate_attr::delegate;
 use std::collections::VecDeque;
 use std::io::Result;
 use std::usize;
@@ -140,19 +141,24 @@ where
         c
     }
 
-    delegate! {
-        to self.content {
-            fn pos(&self) -> usize;
-            fn line(&self) -> usize;
-            fn col(&self) -> usize;
-            fn line_count(&self) -> usize;
-            fn len(&self) -> usize;
-            fn iter(&self) -> CharIter;
-            fn lines(&self) -> LineIter;
-            fn iter_line(&self, line: usize) -> CharIter;
-            fn line_index_to_char_index(&self, line: usize) -> usize;
-        }
-    }
+    #[delegate(self.content)]
+    fn pos(&self) -> usize;
+    #[delegate(self.content)]
+    fn line(&self) -> usize;
+    #[delegate(self.content)]
+    fn col(&self) -> usize;
+    #[delegate(self.content)]
+    fn line_count(&self) -> usize;
+    #[delegate(self.content)]
+    fn len(&self) -> usize;
+    #[delegate(self.content)]
+    fn iter(&self) -> CharIter;
+    #[delegate(self.content)]
+    fn lines(&self) -> LineIter;
+    #[delegate(self.content)]
+    fn iter_line(&self, line: usize) -> CharIter;
+    #[delegate(self.content)]
+    fn line_index_to_char_index(&self, line: usize) -> usize;
 }
 
 impl<T> Saveable for Recorded<T>
@@ -164,25 +170,19 @@ where
     }
 }
 
+#[delegate(self.content)]
 impl<T> Named for Recorded<T>
 where
     T: Editable + Named,
 {
-    delegate! {
-        to self.content {
-            fn name(&self) -> &String;
-            fn set_name(&mut self, name: String) -> ();
-        }
-    }
+    fn name(&self) -> &String;
+    fn set_name(&mut self, name: String) -> ();
 }
 
+#[delegate(self.content)]
 impl<T> Modifiable for Recorded<T>
 where
     T: Editable + Modifiable,
 {
-    delegate! {
-        to self.content {
-            fn was_modified(&self) -> bool;
-        }
-    }
+    fn was_modified(&self) -> bool;
 }

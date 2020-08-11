@@ -1,4 +1,5 @@
 use super::{CharIter, Editable, LineIter, Modifiable, Movement, Named, Saveable, Undoable};
+use delegate_attr::delegate;
 use std::io::Result;
 
 pub type Selection = (usize, usize);
@@ -49,75 +50,60 @@ where
     }
 }
 
+#[delegate(self.content)]
 impl<T> Editable for Select<T>
 where
     T: Editable,
 {
-    delegate! {
-        to self.content {
-            fn step(&mut self, mov: Movement) -> ();
-            fn move_to(&mut self, pos: usize) -> ();
-            fn move_at(&mut self, line: usize, col: usize) -> ();
-            fn insert(&mut self, c: char) -> ();
-            fn insert_forward(&mut self, c: char) -> ();
-            fn delete(&mut self) -> Option<char>;
-            fn delete_forward(&mut self) -> Option<char>;
-            fn pos(&self) -> usize;
-            fn line(&self) -> usize;
-            fn col(&self) -> usize;
-            fn line_count(&self) -> usize;
-            fn len(&self) -> usize;
-            fn iter(&self) -> CharIter;
-            fn lines(&self) -> LineIter;
-            fn iter_line(&self, line: usize) -> CharIter;
-            fn line_index_to_char_index(&self, line: usize) -> usize;
-        }
-    }
+    fn step(&mut self, mov: Movement) -> ();
+    fn move_to(&mut self, pos: usize) -> ();
+    fn move_at(&mut self, line: usize, col: usize) -> ();
+    fn insert(&mut self, c: char) -> ();
+    fn insert_forward(&mut self, c: char) -> ();
+    fn delete(&mut self) -> Option<char>;
+    fn delete_forward(&mut self) -> Option<char>;
+    fn pos(&self) -> usize;
+    fn line(&self) -> usize;
+    fn col(&self) -> usize;
+    fn line_count(&self) -> usize;
+    fn len(&self) -> usize;
+    fn iter(&self) -> CharIter;
+    fn lines(&self) -> LineIter;
+    fn iter_line(&self, line: usize) -> CharIter;
+    fn line_index_to_char_index(&self, line: usize) -> usize;
 }
 
+#[delegate(self.content)]
 impl<T> Saveable for Select<T>
 where
     T: Editable + Saveable,
 {
-    delegate! {
-        to self.content {
-            fn save(&mut self) -> Result<()>;
-        }
-    }
+    fn save(&mut self) -> Result<()>;
 }
 
+#[delegate(self.content)]
 impl<T> Named for Select<T>
 where
     T: Editable + Named,
 {
-    delegate! {
-        to self.content {
-            fn name(&self) -> &String;
-            fn set_name(&mut self, name: String) -> ();
-        }
-    }
+    fn name(&self) -> &String;
+    fn set_name(&mut self, name: String) -> ();
 }
 
+#[delegate(self.content)]
 impl<T> Undoable for Select<T>
 where
     T: Editable + Undoable,
 {
-    delegate! {
-        to self.content {
-            fn undo(&mut self) -> ();
-            fn redo(&mut self) -> ();
-            fn history_len(&self) -> usize;
-        }
-    }
+    fn undo(&mut self) -> ();
+    fn redo(&mut self) -> ();
+    fn history_len(&self) -> usize;
 }
 
+#[delegate(self.content)]
 impl<T> Modifiable for Select<T>
 where
     T: Editable + Modifiable,
 {
-    delegate! {
-        to self.content {
-            fn was_modified(&self) -> bool;
-        }
-    }
+    fn was_modified(&self) -> bool;
 }
