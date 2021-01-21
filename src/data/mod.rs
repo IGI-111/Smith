@@ -7,7 +7,6 @@ pub use self::record::Undoable;
 pub use self::select::{Select, Selectable};
 pub use self::text::Text;
 
-use ropey;
 use std::io::Result;
 
 pub trait Editable {

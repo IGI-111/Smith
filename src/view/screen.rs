@@ -3,7 +3,6 @@ use std::cell::RefCell;
 use std::fmt::Write as FmtWrite;
 use std::io;
 use std::io::{BufWriter, Write};
-use std::iter::FromIterator;
 use syntect::highlighting::Style;
 use termion::color;
 use termion::input::MouseTerminal;
@@ -22,11 +21,12 @@ pub struct Screen {
 impl Screen {
     pub fn with_default_style(default_style: Style) -> Self {
         let (w, h) = termion::terminal_size().unwrap();
-        let write_buf =
-            Array::from_iter(std::iter::repeat((default_style, ' ')).take(w as usize * h as usize));
+        let write_buf: Array<_, _> = std::iter::repeat((default_style, ' '))
+            .take(w as usize * h as usize)
+            .collect();
         let write_buf = write_buf.into_shape((h as usize, w as usize)).unwrap();
-        let read_buf =
-            Array::from_iter(std::iter::repeat((default_style, 'X')).take(w as usize * h as usize));
+        let read_buf: Array<_, _> =
+            (std::iter::repeat((default_style, 'X')).take(w as usize * h as usize)).collect();
         let read_buf = read_buf.into_shape((h as usize, w as usize)).unwrap();
         let out = RefCell::new(
             MouseTerminal::from(AlternateScreen::from(BufWriter::with_capacity(

@@ -48,6 +48,7 @@ where
             }
         }
         self.history.push_front(act);
+        #[allow(clippy::absurd_extreme_comparisons)]
         while self.history.len() > HISTORY_SIZE {
             self.history.pop_back();
         }
@@ -64,6 +65,7 @@ where
             Some(a) => a,
         };
         self.undone.push_front(to_undo.clone());
+        #[allow(clippy::absurd_extreme_comparisons)]
         while self.undone.len() > UNDO_SIZE {
             self.undone.pop_back();
         }

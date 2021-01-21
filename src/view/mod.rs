@@ -59,9 +59,7 @@ impl<'a> View<'a> {
     }
 
     pub fn center_view(&mut self, line: usize) {
-        self.line_offset = line
-            .checked_sub(self.lines_height() as usize / 2)
-            .unwrap_or(0);
+        self.line_offset = line.saturating_sub(self.lines_height() as usize / 2);
     }
 
     pub fn adjust_view(&mut self, line: usize) {
